@@ -1124,9 +1124,9 @@ export function ProductTour() {
 - [x] Evening: Build API routes ✓
 
 ### Day 2: Member Dashboard UI
-- [ ] Morning: Build members list page
-- [ ] Afternoon: Build individual member profile page
-- [ ] Evening: Test and polish
+- [x] Morning: Build members list page ✓
+- [x] Afternoon: Build individual member profile page ✓
+- [x] Evening: Test and polish ✓
 
 ### Day 3: Failed Payment Recovery
 - [ ] Morning: Build API route for failed payments

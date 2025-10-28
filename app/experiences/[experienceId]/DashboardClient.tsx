@@ -17,8 +17,12 @@ import {
   Activity,
   CreditCard,
   ArrowUpDown,
+  LayoutDashboard,
+  UserCircle,
 } from "lucide-react";
 import { DashboardMetrics } from "@/types";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 
 interface DashboardClientProps {
   companyId: string;
@@ -33,6 +37,8 @@ export function DashboardClient({
   userName,
   hasAccess
 }: DashboardClientProps) {
+  const params = useParams();
+  const experienceId = params.experienceId as string;
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -175,6 +181,26 @@ export function DashboardClient({
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
+        {/* Navigation Tabs */}
+        <div className="mb-6 border-b border-[var(--whop-border)]">
+          <nav className="flex gap-6">
+            <Link
+              href={`/experiences/${experienceId}`}
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-[var(--whop-accent)] text-[var(--whop-accent)] font-medium"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Link>
+            <Link
+              href={`/experiences/${experienceId}/members`}
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+            >
+              <UserCircle className="h-4 w-4" />
+              Members
+            </Link>
+          </nav>
+        </div>
+
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
             <div>
