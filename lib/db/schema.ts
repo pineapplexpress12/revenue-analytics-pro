@@ -294,3 +294,19 @@ export const memberAnalyticsRelations = relations(memberAnalytics, ({ one }) => 
   }),
 }));
 
+export const benchmarkData = pgTable("benchmark_data", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  niche: text("niche").notNull(),
+  revenueRange: text("revenue_range").notNull(),
+  avgMrr: decimal("avg_mrr", { precision: 10, scale: 2 }).notNull(),
+  avgChurnRate: decimal("avg_churn_rate", { precision: 5, scale: 2 }).notNull(),
+  avgLtv: decimal("avg_ltv", { precision: 10, scale: 2 }).notNull(),
+  avgArpu: decimal("avg_arpu", { precision: 10, scale: 2 }).notNull(),
+  sampleSize: integer("sample_size").notNull(),
+  ...timestamps,
+}, (table) => ({
+  nicheIdx: index("benchmark_data_niche_idx").on(table.niche),
+  revenueRangeIdx: index("benchmark_data_revenue_range_idx").on(table.revenueRange),
+  nicheRangeIdx: index("benchmark_data_niche_range_idx").on(table.niche, table.revenueRange),
+}));
+
