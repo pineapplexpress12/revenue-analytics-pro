@@ -22,12 +22,12 @@ export function UpgradePrompt() {
       if (res.status === "ok") {
         window.location.reload();
       } else {
-        setError(res.error || "Purchase failed");
+        setError(res.error || "Purchase was not completed");
+        setIsPurchasing(false);
       }
     } catch (err) {
       console.error("Purchase failed:", err);
       setError("Purchase failed. Please try again.");
-    } finally {
       setIsPurchasing(false);
     }
   }
