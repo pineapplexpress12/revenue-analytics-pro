@@ -198,6 +198,13 @@ export function DashboardClient({
               <UserCircle className="h-4 w-4" />
               Members
             </Link>
+            <Link
+              href={`/experiences/${experienceId}/failed-payments`}
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+            >
+              <CreditCard className="h-4 w-4" />
+              Failed Payments
+            </Link>
           </nav>
         </div>
 

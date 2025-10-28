@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { MemberCard } from '@/components/members/MemberCard';
 import { MemberFilters } from '@/components/members/MemberFilters';
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { Search, Users, AlertCircle, Crown, Activity, Loader2, LayoutDashboard, UserCircle } from 'lucide-react';
+import { Search, Users, AlertCircle, Crown, Activity, Loader2, LayoutDashboard, UserCircle, CreditCard } from 'lucide-react';
 
 interface MembersClientProps {
   companyId: string;
@@ -104,6 +104,13 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
             >
               <UserCircle className="h-4 w-4" />
               Members
+            </Link>
+            <Link
+              href={`/experiences/${experienceId}/failed-payments`}
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+            >
+              <CreditCard className="h-4 w-4" />
+              Failed Payments
             </Link>
           </nav>
         </div>
