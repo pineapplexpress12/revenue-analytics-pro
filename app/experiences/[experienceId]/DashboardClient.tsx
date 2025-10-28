@@ -216,6 +216,25 @@ export function DashboardClient({
     }
   };
 
+  const handleGenerateTestData = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch("/api/sync/generate-test-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId,
+        }),
+      });
+      if (response.ok) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Test data generation failed:", error);
+      setSyncing(false);
+    }
+  };
+
 
   if (!hasAccess) {
     return <UpgradePrompt />;
@@ -446,13 +465,20 @@ export function DashboardClient({
               </div>
             </div>
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 flex justify-center gap-4">
               <button
                 onClick={handleSync}
                 disabled={syncing}
                 className="px-6 py-3 text-sm rounded-lg bg-[var(--whop-accent)] text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {syncing ? "Syncing..." : "Refresh Data"}
+              </button>
+              <button
+                onClick={handleGenerateTestData}
+                disabled={syncing}
+                className="px-6 py-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {syncing ? "Generating..." : "Generate Test Data"}
               </button>
             </div>
           </>
