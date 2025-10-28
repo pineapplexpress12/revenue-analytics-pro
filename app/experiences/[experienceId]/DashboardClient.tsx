@@ -11,6 +11,8 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { BenchmarkingCard } from "@/components/benchmarking/BenchmarkingCard";
 import { NoBenchmarkCard } from "@/components/benchmarking/NoBenchmarkCard";
+import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
+import { ProductTour } from "@/components/onboarding/ProductTour";
 import { downloadCSV, formatMetricsForExport } from "@/lib/csv-export";
 import {
   DollarSign,
@@ -50,6 +52,8 @@ export function DashboardClient({
   const [productData, setProductData] = useState<any[]>([]);
   const [benchmarkData, setBenchmarkData] = useState<any>(null);
   const [hasBenchmark, setHasBenchmark] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showProductTour, setShowProductTour] = useState(false);
   
   const [dateRange, setDateRange] = useState<{ start: string; end: string; compareStart?: string; compareEnd?: string }>(() => {
     const end = new Date();
@@ -138,6 +142,23 @@ export function DashboardClient({
     
     contributeToBenchmarks();
   }, [metrics, companyId]);
+  
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem(`welcome-seen-${companyId}`);
+    const hasSeenTour = localStorage.getItem(`tour-seen-${companyId}`);
+    
+    if (!hasSeenWelcome && metrics) {
+      setShowWelcomeModal(true);
+    } else if (!hasSeenTour && metrics) {
+      setShowProductTour(true);
+    }
+  }, [metrics, companyId]);
+  
+  const handleWelcomeClose = () => {
+    setShowWelcomeModal(false);
+    localStorage.setItem(`welcome-seen-${companyId}`, 'true');
+    setShowProductTour(true);
+  };
 
   const handleExportMetrics = () => {
     if (!metrics) return;
@@ -297,6 +318,18 @@ export function DashboardClient({
           </div>
         ) : (
           <>
+            <WelcomeModal 
+              open={showWelcomeModal} 
+              onClose={handleWelcomeClose}
+              companyName={companyName}
+            />
+            
+            {showProductTour && (
+              <div className="mb-6">
+                <ProductTour experienceId={experienceId} />
+              </div>
+            )}
+            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
               <MetricCard
                 title="Monthly Recurring Revenue"
