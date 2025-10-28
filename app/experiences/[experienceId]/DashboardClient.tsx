@@ -9,6 +9,8 @@ import { ProductPerformanceTable } from "@/components/dashboard/ProductPerforman
 import { ExportButton } from "@/components/dashboard/ExportButton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { BenchmarkingCard } from "@/components/benchmarking/BenchmarkingCard";
+import { NoBenchmarkCard } from "@/components/benchmarking/NoBenchmarkCard";
 import { downloadCSV, formatMetricsForExport } from "@/lib/csv-export";
 import {
   DollarSign,
@@ -46,6 +48,8 @@ export function DashboardClient({
   const [memberGrowthData, setMemberGrowthData] = useState<any[]>([]);
   const [cohortData, setCohortData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
+  const [benchmarkData, setBenchmarkData] = useState<any>(null);
+  const [hasBenchmark, setHasBenchmark] = useState(false);
   
   const [dateRange, setDateRange] = useState<{ start: string; end: string; compareStart?: string; compareEnd?: string }>(() => {
     const end = new Date();
@@ -63,12 +67,13 @@ export function DashboardClient({
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const [metricsRes, revenueRes, memberGrowthRes, cohortRes, productRes] = await Promise.all([
+        const [metricsRes, revenueRes, memberGrowthRes, cohortRes, productRes, benchmarkRes] = await Promise.all([
           fetch(`/api/metrics/overview?companyId=${companyId}`),
           fetch(`/api/metrics/revenue?companyId=${companyId}&period=${revenuePeriod}&startDate=${dateRange.start}&endDate=${dateRange.end}`),
           fetch(`/api/metrics/member-growth?companyId=${companyId}&months=${memberGrowthMonths}`),
           fetch(`/api/metrics/cohorts?companyId=${companyId}&cohorts=${cohortCount}`),
-          fetch(`/api/metrics/products?companyId=${companyId}&startDate=${dateRange.start}&endDate=${dateRange.end}`)
+          fetch(`/api/metrics/products?companyId=${companyId}&startDate=${dateRange.start}&endDate=${dateRange.end}`),
+          fetch(`/api/benchmarks/compare?companyId=${companyId}`)
         ]);
         
         if (metricsRes.ok) {
@@ -95,6 +100,17 @@ export function DashboardClient({
           const data = await productRes.json();
           setProductData(data.data || []);
         }
+        
+        if (benchmarkRes.ok) {
+          const data = await benchmarkRes.json();
+          if (data.noBenchmark) {
+            setHasBenchmark(false);
+            setBenchmarkData(data);
+          } else {
+            setHasBenchmark(true);
+            setBenchmarkData(data);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch metrics:", error);
       } finally {
@@ -104,6 +120,24 @@ export function DashboardClient({
 
     fetchMetrics();
   }, [companyId, dateRange, revenuePeriod, memberGrowthMonths, cohortCount]);
+  
+  useEffect(() => {
+    async function contributeToBenchmarks() {
+      if (metrics) {
+        try {
+          await fetch('/api/benchmarks/contribute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ companyId }),
+          });
+        } catch (error) {
+          console.error('Failed to contribute to benchmarks:', error);
+        }
+      }
+    }
+    
+    contributeToBenchmarks();
+  }, [metrics, companyId]);
 
   const handleExportMetrics = () => {
     if (!metrics) return;
@@ -313,8 +347,19 @@ export function DashboardClient({
               />
             </div>
 
-            <div className="mb-8">
+            <div className="grid gap-8 md:grid-cols-2 mb-8">
               <RevenueChart data={revenueData} onExport={handleExportRevenue} />
+              
+              {benchmarkData && (
+                hasBenchmark ? (
+                  <BenchmarkingCard comparison={benchmarkData} />
+                ) : (
+                  <NoBenchmarkCard 
+                    niche={benchmarkData.niche || 'general'} 
+                    revenueRange={benchmarkData.revenueRange || '0-5k'} 
+                  />
+                )
+              )}
             </div>
 
             <div className="mb-8">
