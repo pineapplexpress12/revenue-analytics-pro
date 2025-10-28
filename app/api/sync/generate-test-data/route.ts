@@ -193,9 +193,9 @@ export async function POST(request: NextRequest) {
         .values({
           companyId: dbCompanyId,
           memberId: member.id,
-          totalRevenue: totalRevenue,
+          totalRevenue: totalRevenue.toFixed(2),
           totalPayments: successfulPayments,
-          averagePayment: successfulPayments > 0 ? Math.round(totalRevenue / successfulPayments) : 0,
+          averagePayment: (successfulPayments > 0 ? Math.round(totalRevenue / successfulPayments) : 0).toFixed(2),
           lifetimeMonths: lifetimeMonths,
           lastPaymentAt: lastPaymentDate,
           churnRiskScore: churnRiskScore,
@@ -205,9 +205,9 @@ export async function POST(request: NextRequest) {
         .onConflictDoUpdate({
           target: [memberAnalytics.companyId, memberAnalytics.memberId],
           set: {
-            totalRevenue: totalRevenue,
+            totalRevenue: totalRevenue.toFixed(2),
             totalPayments: successfulPayments,
-            averagePayment: successfulPayments > 0 ? Math.round(totalRevenue / successfulPayments) : 0,
+            averagePayment: (successfulPayments > 0 ? Math.round(totalRevenue / successfulPayments) : 0).toFixed(2),
             lifetimeMonths: lifetimeMonths,
             lastPaymentAt: lastPaymentDate,
             churnRiskScore: churnRiskScore,
