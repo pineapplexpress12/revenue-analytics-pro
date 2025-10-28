@@ -23,23 +23,42 @@ interface MemberGrowthData {
 interface MemberGrowthChartProps {
   data: MemberGrowthData[];
   onExport?: () => void;
+  months?: number;
+  onMonthsChange?: (months: number) => void;
 }
 
-export function MemberGrowthChart({ data, onExport }: MemberGrowthChartProps) {
+export function MemberGrowthChart({ data, onExport, months = 12, onMonthsChange }: MemberGrowthChartProps) {
   return (
     <Card className="bg-gray-a2 border-gray-a4">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-6 font-semibold text-gray-12">
-          Member Growth
-        </CardTitle>
-        {onExport && data.length > 0 && (
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
-          >
-            <Download className="h-3 w-3" />
-            Export
-          </button>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between mb-4">
+          <CardTitle className="text-6 font-semibold text-gray-12">
+            Member Growth
+          </CardTitle>
+          {onExport && data.length > 0 && (
+            <button
+              onClick={onExport}
+              className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
+            >
+              <Download className="h-3 w-3" />
+              Export
+            </button>
+          )}
+        </div>
+        {onMonthsChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Show last:</span>
+            <select
+              value={months}
+              onChange={(e) => onMonthsChange(Number(e.target.value))}
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-medium shadow-sm"
+            >
+              <option value="3">3 months</option>
+              <option value="6">6 months</option>
+              <option value="12">12 months</option>
+              <option value="24">24 months</option>
+            </select>
+          </div>
         )}
       </CardHeader>
       <CardContent>

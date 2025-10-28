@@ -7,6 +7,7 @@ import { MemberGrowthChart } from "@/components/dashboard/MemberGrowthChart";
 import { CohortAnalysis } from "@/components/dashboard/CohortAnalysis";
 import { ProductPerformanceTable } from "@/components/dashboard/ProductPerformanceTable";
 import { ExportButton } from "@/components/dashboard/ExportButton";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { downloadCSV, formatMetricsForExport } from "@/lib/csv-export";
 import {
   DollarSign,
@@ -38,16 +39,29 @@ export function DashboardClient({
   const [memberGrowthData, setMemberGrowthData] = useState<any[]>([]);
   const [cohortData, setCohortData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
+  
+  const [dateRange, setDateRange] = useState<{ start: string; end: string; compareStart?: string; compareEnd?: string }>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    };
+  });
+  const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'week' | 'month'>('month');
+  const [memberGrowthMonths, setMemberGrowthMonths] = useState(12);
+  const [cohortCount, setCohortCount] = useState(6);
 
   useEffect(() => {
     async function fetchMetrics() {
       try {
         const [metricsRes, revenueRes, memberGrowthRes, cohortRes, productRes] = await Promise.all([
           fetch(`/api/metrics/overview?companyId=${companyId}`),
-          fetch(`/api/metrics/revenue?companyId=${companyId}&period=month`),
-          fetch(`/api/metrics/member-growth?companyId=${companyId}&months=12`),
-          fetch(`/api/metrics/cohorts?companyId=${companyId}&cohorts=6`),
-          fetch(`/api/metrics/products?companyId=${companyId}`)
+          fetch(`/api/metrics/revenue?companyId=${companyId}&period=${revenuePeriod}&startDate=${dateRange.start}&endDate=${dateRange.end}`),
+          fetch(`/api/metrics/member-growth?companyId=${companyId}&months=${memberGrowthMonths}`),
+          fetch(`/api/metrics/cohorts?companyId=${companyId}&cohorts=${cohortCount}`),
+          fetch(`/api/metrics/products?companyId=${companyId}&startDate=${dateRange.start}&endDate=${dateRange.end}`)
         ]);
         
         if (metricsRes.ok) {
@@ -82,7 +96,7 @@ export function DashboardClient({
     }
 
     fetchMetrics();
-  }, [companyId]);
+  }, [companyId, dateRange, revenuePeriod, memberGrowthMonths, cohortCount]);
 
   const handleExportMetrics = () => {
     if (!metrics) return;
@@ -167,17 +181,40 @@ export function DashboardClient({
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-9 font-bold mb-2">
-              Revenue Analytics Dashboard
-            </h1>
-            <p className="text-4 text-gray-11">
-              Welcome back, {userName}! Track your key metrics for {companyName}
-            </p>
+        <div className="mb-8">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-9 font-bold mb-2">
+                Revenue Analytics Dashboard
+              </h1>
+              <p className="text-4 text-gray-11">
+                Welcome back, {userName}! Track your key metrics for {companyName}
+              </p>
+            </div>
+            {metrics && (
+              <ExportButton onClick={handleExportMetrics} label="Export All Metrics" />
+            )}
           </div>
           {metrics && (
-            <ExportButton onClick={handleExportMetrics} label="Export All Metrics" />
+            <div className="flex items-center gap-4">
+              <DateRangePicker 
+                onDateRangeChange={(start, end, compareStart, compareEnd) => 
+                  setDateRange({ start, end, compareStart, compareEnd })
+                }
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Revenue view:</span>
+                <select
+                  value={revenuePeriod}
+                  onChange={(e) => setRevenuePeriod(e.target.value as 'day' | 'week' | 'month')}
+                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-medium shadow-sm"
+                >
+                  <option value="day">Daily</option>
+                  <option value="week">Weekly</option>
+                  <option value="month">Monthly</option>
+                </select>
+              </div>
+            </div>
           )}
         </div>
 
@@ -254,11 +291,21 @@ export function DashboardClient({
             </div>
 
             <div className="mb-8">
-              <MemberGrowthChart data={memberGrowthData} onExport={handleExportMemberGrowth} />
+              <MemberGrowthChart 
+                data={memberGrowthData} 
+                onExport={handleExportMemberGrowth}
+                months={memberGrowthMonths}
+                onMonthsChange={setMemberGrowthMonths}
+              />
             </div>
 
             <div className="mb-8">
-              <CohortAnalysis data={cohortData} onExport={handleExportCohorts} />
+              <CohortAnalysis 
+                data={cohortData} 
+                onExport={handleExportCohorts}
+                cohortCount={cohortCount}
+                onCohortCountChange={setCohortCount}
+              />
             </div>
 
             <div className="mb-8">

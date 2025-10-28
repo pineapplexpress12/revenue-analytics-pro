@@ -19,6 +19,8 @@ interface CohortData {
 interface CohortAnalysisProps {
   data: CohortData[];
   onExport?: () => void;
+  cohortCount?: number;
+  onCohortCountChange?: (count: number) => void;
 }
 
 function getRetentionColor(rate: number): string {
@@ -29,7 +31,7 @@ function getRetentionColor(rate: number): string {
   return "bg-red-9/20 text-red-11";
 }
 
-export function CohortAnalysis({ data, onExport }: CohortAnalysisProps) {
+export function CohortAnalysis({ data, onExport, cohortCount = 6, onCohortCountChange }: CohortAnalysisProps) {
   if (!data || data.length === 0) {
     return (
       <Card className="bg-gray-a2 border-gray-a4">
@@ -47,23 +49,39 @@ export function CohortAnalysis({ data, onExport }: CohortAnalysisProps) {
 
   return (
     <Card className="bg-gray-a2 border-gray-a4">
-      <CardHeader className="flex flex-row items-start justify-between">
-        <div>
-          <CardTitle className="text-6 font-semibold text-gray-12">
-            Cohort Retention Analysis
-          </CardTitle>
-          <p className="text-3 text-gray-11 mt-2">
-            Percentage of members still active from each signup month
-          </p>
+      <CardHeader>
+        <div className="flex flex-row items-start justify-between mb-4">
+          <div>
+            <CardTitle className="text-6 font-semibold text-gray-12">
+              Cohort Retention Analysis
+            </CardTitle>
+            <p className="text-3 text-gray-11 mt-2">
+              Percentage of members still active from each signup month
+            </p>
+          </div>
+          {onExport && data.length > 0 && (
+            <button
+              onClick={onExport}
+              className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
+            >
+              <Download className="h-3 w-3" />
+              Export
+            </button>
+          )}
         </div>
-        {onExport && data.length > 0 && (
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
-          >
-            <Download className="h-3 w-3" />
-            Export
-          </button>
+        {onCohortCountChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Show last:</span>
+            <select
+              value={cohortCount}
+              onChange={(e) => onCohortCountChange(Number(e.target.value))}
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-medium shadow-sm"
+            >
+              <option value="3">3 cohorts</option>
+              <option value="6">6 cohorts</option>
+              <option value="12">12 cohorts</option>
+            </select>
+          </div>
         )}
       </CardHeader>
       <CardContent>
