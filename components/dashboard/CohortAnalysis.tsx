@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 
 interface CohortData {
@@ -34,57 +33,50 @@ function getRetentionColor(rate: number): string {
 export function CohortAnalysis({ data, onExport, cohortCount = 6, onCohortCountChange }: CohortAnalysisProps) {
   if (!data || data.length === 0) {
     return (
-      <Card className="bg-gray-a2 border-gray-a4">
-        <CardHeader>
-          <CardTitle className="text-6 font-semibold text-gray-12">
-            Cohort Retention Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3 text-gray-11">No cohort data available yet. Sync your data to see retention analysis.</p>
-        </CardContent>
-      </Card>
+      <div className="whop-card">
+        <h3 className="text-lg font-semibold text-[var(--whop-text-primary)] mb-2">
+          Cohort Retention Analysis
+        </h3>
+        <p className="text-sm text-[var(--whop-text-secondary)]">No cohort data available yet. Sync your data to see retention analysis.</p>
+      </div>
     );
   }
 
   return (
-    <Card className="bg-gray-a2 border-gray-a4">
-      <CardHeader>
-        <div className="flex flex-row items-start justify-between mb-4">
-          <div>
-            <CardTitle className="text-6 font-semibold text-gray-12">
-              Cohort Retention Analysis
-            </CardTitle>
-            <p className="text-3 text-gray-11 mt-2">
-              Percentage of members still active from each signup month
-            </p>
-          </div>
-          {onExport && data.length > 0 && (
-            <button
-              onClick={onExport}
-              className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
-            >
-              <Download className="h-3 w-3" />
-              Export
-            </button>
-          )}
+    <div className="whop-card">
+      <div className="flex flex-row items-start justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-[var(--whop-text-primary)]">
+            Cohort Retention Analysis
+          </h3>
+          <p className="text-sm text-[var(--whop-text-secondary)] mt-1">
+            Percentage of members still active from each signup month
+          </p>
         </div>
-        {onCohortCountChange && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show last:</span>
-            <select
-              value={cohortCount}
-              onChange={(e) => onCohortCountChange(Number(e.target.value))}
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-medium shadow-sm"
-            >
-              <option value="3">3 cohorts</option>
-              <option value="6">6 cohorts</option>
-              <option value="12">12 cohorts</option>
-            </select>
-          </div>
+        {onExport && data.length > 0 && (
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-transparent border border-[var(--whop-border)] text-[var(--whop-text-secondary)] hover:bg-[var(--whop-card-bg)] hover:border-gray-600 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </button>
         )}
-      </CardHeader>
-      <CardContent>
+      </div>
+      {onCohortCountChange && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-[var(--whop-text-secondary)]">Show last:</span>
+          <select
+            value={cohortCount}
+            onChange={(e) => onCohortCountChange(Number(e.target.value))}
+            className="px-3 py-1.5 bg-[var(--whop-card-bg)] border border-[var(--whop-border)] rounded-lg text-[var(--whop-text-primary)] text-sm font-medium"
+          >
+            <option value="3">3 cohorts</option>
+            <option value="6">6 cohorts</option>
+            <option value="12">12 cohorts</option>
+          </select>
+        </div>
+      )}
         <div className="overflow-x-auto">
           <table className="w-full text-3">
             <thead>
@@ -182,7 +174,6 @@ export function CohortAnalysis({ data, onExport, cohortCount = 6, onCohortCountC
             <span className="text-gray-11">&lt;20% Poor</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

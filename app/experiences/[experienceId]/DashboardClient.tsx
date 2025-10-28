@@ -8,6 +8,7 @@ import { CohortAnalysis } from "@/components/dashboard/CohortAnalysis";
 import { ProductPerformanceTable } from "@/components/dashboard/ProductPerformanceTable";
 import { ExportButton } from "@/components/dashboard/ExportButton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { downloadCSV, formatMetricsForExport } from "@/lib/csv-export";
 import {
   DollarSign,
@@ -156,14 +157,7 @@ export function DashboardClient({
 
 
   if (!hasAccess) {
-    return (
-      <div className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-9 font-bold mb-4 text-gray-12">Access Denied</h1>
-          <p className="text-4 text-gray-11">You don't have access to this dashboard.</p>
-        </div>
-      </div>
-    );
+    return <UpgradePrompt />;
   }
 
   if (loading) {
@@ -317,24 +311,24 @@ export function DashboardClient({
               <EmailReportSettings companyId={companyId} companyName={companyName} userEmail={userEmail} />
             </div> */}
 
-            <div className="bg-gray-a2 border border-gray-a4 rounded-3xl p-6">
-              <h2 className="text-6 font-semibold mb-4 text-gray-12">Quick Stats</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="border-l-4 border-purple-9 pl-4">
-                  <p className="text-3 text-gray-11">Growth Rate</p>
-                  <p className="text-7 font-bold text-purple-11">
+            <div className="whop-card">
+              <h2 className="text-lg font-semibold mb-6 text-[var(--whop-text-primary)]">Quick Stats</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="border-l-4 border-purple-500 pl-4">
+                  <p className="text-sm text-[var(--whop-text-secondary)]">Growth Rate</p>
+                  <p className="text-2xl font-bold text-purple-400 mt-1">
                     +{metrics.mrrGrowth.toFixed(1)}%
                   </p>
                 </div>
-                <div className="border-l-4 border-blue-9 pl-4">
-                  <p className="text-3 text-gray-11">Active Subscriptions</p>
-                  <p className="text-7 font-bold text-blue-11">
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <p className="text-sm text-[var(--whop-text-secondary)]">Active Subscriptions</p>
+                  <p className="text-2xl font-bold text-blue-400 mt-1">
                     {metrics.activeMembers}
                   </p>
                 </div>
-                <div className="border-l-4 border-green-9 pl-4">
-                  <p className="text-3 text-gray-11">Monthly Revenue</p>
-                  <p className="text-7 font-bold text-green-11">
+                <div className="border-l-4 border-green-500 pl-4">
+                  <p className="text-sm text-[var(--whop-text-secondary)]">Monthly Revenue</p>
+                  <p className="text-2xl font-bold text-green-400 mt-1">
                     ${metrics.mrr.toFixed(2)}
                   </p>
                 </div>
@@ -345,7 +339,7 @@ export function DashboardClient({
               <button
                 onClick={handleSync}
                 disabled={syncing}
-                className="bg-gray-a3 text-gray-12 px-4 py-2 rounded-2 font-medium hover:bg-gray-a4 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 text-sm rounded-lg bg-[var(--whop-accent)] text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {syncing ? "Syncing..." : "Refresh Data"}
               </button>

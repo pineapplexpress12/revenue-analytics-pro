@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import {
   LineChart,
@@ -24,20 +23,20 @@ interface RevenueChartProps {
 
 export function RevenueChart({ data, onExport }: RevenueChartProps) {
   return (
-    <Card className="col-span-4 bg-gray-a2 border-gray-a4">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-gray-12">Revenue Over Time</CardTitle>
+    <div className="whop-card">
+      <div className="flex flex-row items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-[var(--whop-text-primary)]">Revenue Over Time</h3>
         {onExport && data.length > 0 && (
           <button
             onClick={onExport}
-            className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-transparent border border-[var(--whop-border)] text-[var(--whop-text-secondary)] hover:bg-[var(--whop-card-bg)] hover:border-gray-600 transition-colors"
           >
-            <Download className="h-3 w-3" />
+            <Download className="h-4 w-4" />
             Export
           </button>
         )}
-      </CardHeader>
-      <CardContent className="pl-2">
+      </div>
+      <div className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -84,7 +83,7 @@ export function RevenueChart({ data, onExport }: RevenueChartProps) {
             )}
           </LineChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

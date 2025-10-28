@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 import {
   LineChart,
@@ -29,18 +28,18 @@ interface MemberGrowthChartProps {
 
 export function MemberGrowthChart({ data, onExport, months = 12, onMonthsChange }: MemberGrowthChartProps) {
   return (
-    <Card className="bg-gray-a2 border-gray-a4">
-      <CardHeader>
+    <div className="whop-card">
+      <div className="mb-6">
         <div className="flex flex-row items-center justify-between mb-4">
-          <CardTitle className="text-6 font-semibold text-gray-12">
+          <h3 className="text-lg font-semibold text-[var(--whop-text-primary)]">
             Member Growth
-          </CardTitle>
+          </h3>
           {onExport && data.length > 0 && (
             <button
               onClick={onExport}
-              className="flex items-center gap-1 text-3 text-gray-11 hover:text-gray-12 transition"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-transparent border border-[var(--whop-border)] text-[var(--whop-text-secondary)] hover:bg-[var(--whop-card-bg)] hover:border-gray-600 transition-colors"
             >
-              <Download className="h-3 w-3" />
+              <Download className="h-4 w-4" />
               Export
             </button>
           )}
@@ -60,8 +59,8 @@ export function MemberGrowthChart({ data, onExport, months = 12, onMonthsChange 
             </select>
           </div>
         )}
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
         <ResponsiveContainer width="100%" height={350}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -107,7 +106,7 @@ export function MemberGrowthChart({ data, onExport, months = 12, onMonthsChange 
             />
           </LineChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
 
 interface ProductMetric {
@@ -22,27 +21,23 @@ interface ProductPerformanceTableProps {
 export function ProductPerformanceTable({ data, onExport }: ProductPerformanceTableProps) {
   if (!data || data.length === 0) {
     return (
-      <Card className="bg-gray-a2 border-gray-a4">
-        <CardHeader>
-          <CardTitle className="text-6 font-semibold text-gray-12">
-            Product Performance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3 text-gray-11">No product data available yet. Sync your data to see product performance.</p>
-        </CardContent>
-      </Card>
+      <div className="whop-card">
+        <h3 className="text-lg font-semibold text-[var(--whop-text-primary)] mb-2">
+          Product Performance
+        </h3>
+        <p className="text-sm text-[var(--whop-text-secondary)]">No product data available yet. Sync your data to see product performance.</p>
+      </div>
     );
   }
 
   return (
-    <Card className="bg-gray-a2 border-gray-a4">
-      <CardHeader className="flex flex-row items-start justify-between">
+    <div className="whop-card">
+      <div className="flex flex-row items-start justify-between mb-6">
         <div>
-          <CardTitle className="text-6 font-semibold text-gray-12">
+          <h3 className="text-lg font-semibold text-[var(--whop-text-primary)]">
             Product Performance
-          </CardTitle>
-          <p className="text-3 text-gray-11 mt-2">
+          </h3>
+          <p className="text-sm text-[var(--whop-text-secondary)] mt-1">
             Revenue, members, and metrics by product
           </p>
         </div>
@@ -55,8 +50,7 @@ export function ProductPerformanceTable({ data, onExport }: ProductPerformanceTa
             Export
           </button>
         )}
-      </CardHeader>
-      <CardContent>
+      </div>
         <div className="overflow-x-auto">
           <table className="w-full text-3">
             <thead>
@@ -126,7 +120,6 @@ export function ProductPerformanceTable({ data, onExport }: ProductPerformanceTa
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
