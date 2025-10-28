@@ -3,18 +3,37 @@
 	"version": "0.2.0",
 	"private": true,
 	"scripts": {
-		"dev": "whop-proxy --command 'next dev --turbopack'",
+		"dev": "whop-proxy --command 'next dev'",
 		"build": "next build",
 		"start": "next start",
-		"lint": "biome lint"
+		"lint": "biome lint",
+		"db:push": "dotenv -e .env.development.local -- drizzle-kit push",
+		"db:generate": "dotenv -e .env.development.local -- drizzle-kit generate",
+		"db:migrate": "dotenv -e .env.development.local -- drizzle-kit migrate",
+		"db:studio": "dotenv -e .env.development.local -- drizzle-kit studio",
+		"db:seed": "dotenv -e .env.development.local -- tsx scripts/seed-test-data.ts"
 	},
 	"dependencies": {
+		"@paralleldrive/cuid2": "^3.0.4",
+		"@react-email/render": "^1.4.0",
+		"@tanstack/react-query": "^5.90.5",
 		"@vercel/functions": "^3.1.4",
 		"@whop/react": "0.3.0",
 		"@whop/sdk": "0.0.2",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"date-fns": "^4.1.0",
+		"dotenv": "^17.2.3",
+		"drizzle-orm": "^0.44.7",
+		"lucide-react": "^0.548.0",
 		"next": "16.0.0",
+		"postgres": "^3.4.7",
 		"react": "19.2.0",
-		"react-dom": "19.2.0"
+		"react-dom": "19.2.0",
+		"recharts": "^3.3.0",
+		"resend": "^6.3.0",
+		"tailwind-merge": "^3.3.1",
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.6",
@@ -24,7 +43,9 @@
 		"@types/react-dom": "19.2.2",
 		"@whop-apps/dev-proxy": "0.0.1-canary.117",
 		"dotenv-cli": "^10.0.0",
+		"drizzle-kit": "^0.31.5",
 		"tailwindcss": "^4.1.14",
+		"tsx": "^4.20.6",
 		"typescript": "^5.9.3"
 	},
 	"packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531",
