@@ -29,7 +29,7 @@ Revenue Analytics Pro Team
 
 ---
 
-P.S. Your 3-day trial includes everything. No credit card required.
+P.S. Your 7-day trial includes everything. Cancel before it ends and pay nothing.
 ```
 
 **Variables needed:**
@@ -74,7 +74,7 @@ Revenue Analytics Pro Team
 
 ---
 
-Trial days remaining: 2
+Trial days remaining: 6
 ```
 
 **Variables needed:**
@@ -84,16 +84,16 @@ Trial days remaining: 2
 
 ---
 
-## Day 3 Email (Final)
+## Day 7 Email (Final)
 
-**Trigger:** Send 48 hours after Day 1 email (day before trial ends)
+**Trigger:** Send on day 6 of trial (day before trial ends)
 
 **Subject:** Your trial ends tomorrow ⏰
 
 ```
 {name},
 
-Tomorrow your 3-day trial of Revenue Analytics Pro ends.
+Tomorrow your 7-day trial of Revenue Analytics Pro ends.
 
 Here's what you'll lose access to:
 

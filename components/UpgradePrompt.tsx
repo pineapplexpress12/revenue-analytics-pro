@@ -59,7 +59,7 @@ export function UpgradePrompt() {
 
               <div className="mt-12">
                 <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-semibold text-white mb-6">
-                  3-Day Free Trial
+                  7-Day Free Trial
                 </div>
                 <div className="text-7xl font-bold text-white mb-2">$49</div>
                 <div className="text-xl text-gray-400">per month after trial</div>
@@ -79,7 +79,7 @@ export function UpgradePrompt() {
                 )}
                 
                 <p className="text-sm text-gray-500 mt-4 text-center">
-                  Cancel anytime • No credit card for trial
+                  Cancel anytime during trial • No charge until trial ends
                 </p>
               </div>
             </div>

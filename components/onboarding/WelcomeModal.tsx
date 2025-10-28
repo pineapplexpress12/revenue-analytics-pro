@@ -93,7 +93,7 @@ function TrialFeatures() {
   return (
     <div className="space-y-4">
       <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-        <h4 className="font-semibold text-blue-400 mb-2">✨ Your 3-Day Trial Includes:</h4>
+        <h4 className="font-semibold text-blue-400 mb-2">✨ Your 7-Day Trial Includes:</h4>
         <ul className="space-y-2 text-sm text-[var(--whop-text-secondary)]">
           <li className="flex items-start gap-2">
             <span className="text-green-400 mt-0.5">✓</span>
@@ -119,8 +119,8 @@ function TrialFeatures() {
       </div>
       <div className="p-4 bg-[var(--whop-bg)] border border-[var(--whop-border)] rounded-lg">
         <p className="text-sm text-[var(--whop-text-secondary)]">
-          💡 <strong className="text-[var(--whop-text-primary)]">No credit card required</strong> — 
-          Try everything for free, then decide if it's worth $49/month.
+          💡 <strong className="text-[var(--whop-text-primary)]">Cancel anytime during trial</strong> — 
+          Try everything for 7 days, then $49/month. Cancel before trial ends and pay nothing.
         </p>
       </div>
     </div>
@@ -143,7 +143,7 @@ export function WelcomeModal({ open, onClose, companyName }: WelcomeModalProps) 
     },
     {
       title: "Your Trial Includes Everything",
-      description: "Full access to all features for 3 days",
+      description: "Full access to all features for 7 days",
       content: <TrialFeatures />
     }
   ];
