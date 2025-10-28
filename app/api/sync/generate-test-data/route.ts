@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
       const failureRate = failedPaymentsCount / Math.max(paymentCount, 1);
       engagementScore += Math.round((1 - failureRate) * 15);
       engagementScore += Math.min(lifetimeMonths * 2, 15);
-      engagementScore = Math.min(engagementScore, 100);
+      engagementScore = Math.min(Math.round(engagementScore), 100);
 
       await db
         .insert(memberAnalytics)

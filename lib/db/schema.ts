@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, decimal, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, decimal, integer, boolean, jsonb, index, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -281,6 +281,7 @@ export const memberAnalytics = pgTable("member_analytics", {
   companyIdIdx: index("member_analytics_company_id_idx").on(table.companyId),
   memberIdIdx: index("member_analytics_member_id_idx").on(table.memberId),
   churnRiskIdx: index("member_analytics_churn_risk_idx").on(table.churnRiskScore),
+  companyMemberUnique: unique("member_analytics_company_member_unique").on(table.companyId, table.memberId),
 }));
 
 export const memberAnalyticsRelations = relations(memberAnalytics, ({ one }) => ({

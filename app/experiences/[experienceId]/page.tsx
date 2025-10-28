@@ -57,6 +57,7 @@ export default async function ExperiencePage({
 			companyName={experience.company.title}
 			userName={user.name || user.username}
 			hasAccess={hasAccess}
+			isAdmin={userId === adminUserId}
 		/>
 	);
 }

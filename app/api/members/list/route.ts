@@ -1,26 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { members, memberAnalytics, memberships } from '@/lib/db/schema';
+import { members, memberAnalytics, memberships, companies } from '@/lib/db/schema';
 import { eq, and, desc, asc, ilike, gte, lte, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const companyId = searchParams.get('companyId');
+    const whopCompanyId = searchParams.get('companyId');
     const page = parseInt(searchParams.get('page') || '1');
     const search = searchParams.get('search') || '';
     const sortBy = searchParams.get('sortBy') || 'totalRevenue'; // totalRevenue, churnRisk, recent
     const filterRisk = searchParams.get('filterRisk') || 'all'; // all, high, medium, low
     
-    if (!companyId) {
+    if (!whopCompanyId) {
       return NextResponse.json(
         { error: 'Company ID is required' },
         { status: 400 }
       );
     }
 
+    // Get database company ID from Whop company ID
+    const company = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.whopCompanyId, whopCompanyId))
+      .limit(1);
+
+    if (!company[0]) {
+      return NextResponse.json(
+        { error: 'Company not found' },
+        { status: 404 }
+      );
+    }
+
+    const dbCompanyId = company[0].id;
+
     // Build where conditions
-    const conditions = [eq(members.companyId, companyId)];
+    const conditions = [eq(members.companyId, dbCompanyId)];
     
     // Add search filter
     if (search) {

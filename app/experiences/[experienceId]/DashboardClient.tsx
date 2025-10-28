@@ -33,13 +33,15 @@ interface DashboardClientProps {
   companyName: string;
   userName: string;
   hasAccess: boolean;
+  isAdmin: boolean;
 }
 
 export function DashboardClient({ 
   companyId, 
   companyName, 
   userName,
-  hasAccess
+  hasAccess,
+  isAdmin
 }: DashboardClientProps) {
   const params = useParams();
   const experienceId = params.experienceId as string;
@@ -473,13 +475,15 @@ export function DashboardClient({
               >
                 {syncing ? "Syncing..." : "Refresh Data"}
               </button>
-              <button
-                onClick={handleGenerateTestData}
-                disabled={syncing}
-                className="px-6 py-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {syncing ? "Generating..." : "Generate Test Data"}
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={handleGenerateTestData}
+                  disabled={syncing}
+                  className="px-6 py-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {syncing ? "Generating..." : "Generate Test Data"}
+                </button>
+              )}
             </div>
           </>
         )}

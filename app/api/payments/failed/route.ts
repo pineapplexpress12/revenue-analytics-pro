@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { payments, members } from '@/lib/db/schema';
+import { payments, members, companies } from '@/lib/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const companyId = searchParams.get('companyId');
+    const whopCompanyId = searchParams.get('companyId');
 
-    if (!companyId) {
+    if (!whopCompanyId) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
     }
+
+    // Get database company ID from Whop company ID
+    const company = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.whopCompanyId, whopCompanyId))
+      .limit(1);
+
+    if (!company[0]) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+
+    const dbCompanyId = company[0].id;
 
     const failedPaymentsList = await db
       .select({
@@ -27,7 +40,7 @@ export async function GET(request: NextRequest) {
       .leftJoin(members, eq(payments.memberId, members.id))
       .where(
         and(
-          eq(payments.companyId, companyId),
+          eq(payments.companyId, dbCompanyId),
           eq(payments.status, 'failed')
         )
       )
@@ -59,7 +72,7 @@ export async function GET(request: NextRequest) {
       .from(payments)
       .where(
         and(
-          eq(payments.companyId, companyId),
+          eq(payments.companyId, dbCompanyId),
           eq(payments.status, 'failed')
         )
       )
@@ -72,7 +85,7 @@ export async function GET(request: NextRequest) {
       .from(payments)
       .where(
         and(
-          eq(payments.companyId, companyId),
+          eq(payments.companyId, dbCompanyId),
           eq(payments.status, 'failed'),
           sql`${payments.paymentDate} >= NOW() - INTERVAL '30 days'`
         )
