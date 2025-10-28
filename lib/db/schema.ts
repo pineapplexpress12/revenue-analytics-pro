@@ -263,3 +263,34 @@ export const emailReportSettingsRelations = relations(emailReportSettings, ({ on
   }),
 }));
 
+// Member Analytics table - for member-level insights and scoring
+export const memberAnalytics = pgTable("member_analytics", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  companyId: text("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  memberId: text("member_id").references(() => members.id, { onDelete: "cascade" }).notNull(),
+  totalRevenue: decimal("total_revenue", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalPayments: integer("total_payments").default(0).notNull(),
+  averagePayment: decimal("average_payment", { precision: 10, scale: 2 }).default("0").notNull(),
+  lifetimeMonths: integer("lifetime_months").default(0).notNull(),
+  lastPaymentAt: timestamp("last_payment_at"),
+  churnRiskScore: integer("churn_risk_score").default(0).notNull(), // 0-100, higher = more likely to churn
+  engagementScore: integer("engagement_score").default(0).notNull(), // 0-100, higher = more engaged
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+  ...timestamps,
+}, (table) => ({
+  companyIdIdx: index("member_analytics_company_id_idx").on(table.companyId),
+  memberIdIdx: index("member_analytics_member_id_idx").on(table.memberId),
+  churnRiskIdx: index("member_analytics_churn_risk_idx").on(table.churnRiskScore),
+}));
+
+export const memberAnalyticsRelations = relations(memberAnalytics, ({ one }) => ({
+  company: one(companies, {
+    fields: [memberAnalytics.companyId],
+    references: [companies.id],
+  }),
+  member: one(members, {
+    fields: [memberAnalytics.memberId],
+    references: [members.id],
+  }),
+}));
+
