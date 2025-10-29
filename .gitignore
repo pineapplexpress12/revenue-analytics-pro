@@ -41,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documentation files (internal use only)
+REVENUE_ANALYTICS_DASHBOARD_SPEC.md
+PHASE3_NEW_FEATURES.md
+Whop_app_payments.md
+EMAIL_SEQUENCES.md

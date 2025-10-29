@@ -5,7 +5,11 @@ import { useIframeSdk } from "@whop/react";
 import { useState } from "react";
 import Image from "next/image";
 
-export function UpgradePrompt() {
+interface UpgradePromptProps {
+  experienceId: string;
+}
+
+export function UpgradePrompt({ experienceId }: UpgradePromptProps) {
   const iframeSdk = useIframeSdk();
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string>();
@@ -15,8 +19,21 @@ export function UpgradePrompt() {
       setIsPurchasing(true);
       setError(undefined);
 
+      const response = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experienceId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create checkout");
+      }
+
+      const checkoutConfiguration = await response.json();
+
       const res = await iframeSdk.inAppPurchase({ 
-        planId: process.env.NEXT_PUBLIC_PREMIUM_PLAN_ID!
+        planId: checkoutConfiguration.plan.id,
+        id: checkoutConfiguration.id
       });
 
       if (res.status === "ok") {

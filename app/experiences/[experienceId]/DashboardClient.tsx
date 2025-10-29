@@ -239,7 +239,7 @@ export function DashboardClient({
 
 
   if (!hasAccess) {
-    return <UpgradePrompt />;
+    return <UpgradePrompt experienceId={experienceId} />;
   }
 
   if (loading) {
