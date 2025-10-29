@@ -26,14 +26,15 @@ export function UpgradePrompt({ experienceId }: UpgradePromptProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create checkout");
+        const errorData = await response.json();
+        console.error("Checkout API error:", errorData);
+        throw new Error(errorData.error || "Failed to create checkout");
       }
 
-      const checkoutConfiguration = await response.json();
+      const data = await response.json();
 
       const res = await iframeSdk.inAppPurchase({ 
-        planId: checkoutConfiguration.plan.id,
-        id: checkoutConfiguration.id
+        planId: data.planId
       });
 
       if (res.status === "ok") {

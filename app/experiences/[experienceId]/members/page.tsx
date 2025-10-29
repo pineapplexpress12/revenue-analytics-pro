@@ -20,7 +20,10 @@ export default async function MembersPage({
   
   if (!hasAccess) {
     try {
-      const accessResponse = await whopsdk.users.checkAccess(experienceId, { id: userId });
+      const accessResponse = await whopsdk.users.checkAccess(
+        process.env.NEXT_PUBLIC_PREMIUM_ACCESS_PASS_ID!,
+        { id: userId }
+      );
       hasAccess = accessResponse.has_access;
     } catch (error) {
       console.error("Access check failed:", error);

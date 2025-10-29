@@ -15,12 +15,16 @@ export default async function ExperiencePage({
 		whopsdk.users.retrieve(userId),
 	]);
 
-	const adminUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-	let hasAccess = userId === adminUserId;
+	// const adminUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
+	// let hasAccess = userId === adminUserId;
+	let hasAccess = false;
 	
 	if (!hasAccess) {
 		try {
-			const accessResponse = await whopsdk.users.checkAccess(experienceId, { id: userId });
+			const accessResponse = await whopsdk.users.checkAccess(
+				process.env.NEXT_PUBLIC_PREMIUM_ACCESS_PASS_ID!,
+				{ id: userId }
+			);
 			hasAccess = accessResponse.has_access;
 		} catch (error) {
 			console.error("Access check failed:", error);
@@ -34,7 +38,7 @@ export default async function ExperiencePage({
 			companyName={experience.company.title}
 			userName={user.name || user.username}
 			hasAccess={hasAccess}
-			isAdmin={userId === adminUserId}
+			isAdmin={false}
 		/>
 	);
 }
