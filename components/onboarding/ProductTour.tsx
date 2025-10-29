@@ -6,11 +6,19 @@ import Link from 'next/link';
 
 interface ProductTourProps {
   experienceId: string;
+  companyId?: string;
 }
 
-export function ProductTour({ experienceId }: ProductTourProps) {
+export function ProductTour({ experienceId, companyId }: ProductTourProps) {
   const [dismissed, setDismissed] = useState(false);
   const [currentTip, setCurrentTip] = useState(0);
+  
+  const handleDismiss = () => {
+    setDismissed(true);
+    if (companyId) {
+      localStorage.setItem(`tour-seen-${companyId}`, 'true');
+    }
+  };
   
   const tips = [
     {
@@ -71,7 +79,7 @@ export function ProductTour({ experienceId }: ProductTourProps) {
                 </button>
               ) : (
                 <button
-                  onClick={() => setDismissed(true)}
+                  onClick={handleDismiss}
                   className="px-4 py-2 text-sm bg-[var(--whop-bg)] border border-[var(--whop-border)] text-[var(--whop-text-primary)] rounded-lg font-medium hover:border-gray-600 transition-colors"
                 >
                   Got It
@@ -81,7 +89,7 @@ export function ProductTour({ experienceId }: ProductTourProps) {
           </div>
         </div>
         <button
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           className="p-2 hover:bg-[var(--whop-bg)] rounded-lg transition-colors flex-shrink-0"
         >
           <X className="w-4 h-4 text-[var(--whop-text-secondary)]" />

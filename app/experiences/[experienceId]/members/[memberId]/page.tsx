@@ -12,31 +12,14 @@ export default async function MemberProfilePage({
 
   const experience = await whopsdk.experiences.retrieve(experienceId);
 
-  // Check access
   const adminUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
   let hasAccess = userId === adminUserId;
   
   if (!hasAccess) {
     try {
-      const membershipsResponse = await fetch(
-        `https://api.whop.com/api/v5/memberships?valid=true&user_id=${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.WHOP_API_KEY}`,
-          },
-        }
-      );
-      
-      if (membershipsResponse.ok) {
-        const membershipsData = await membershipsResponse.json();
-        const premiumAccessPassId = process.env.NEXT_PUBLIC_PREMIUM_ACCESS_PASS_ID!;
-        
-        hasAccess = membershipsData.data?.some(
-          (membership: any) => 
-            membership.access_pass?.id === premiumAccessPassId && 
-            membership.valid === true
-        ) || false;
-      }
+      const premiumAccessPassId = process.env.NEXT_PUBLIC_PREMIUM_ACCESS_PASS_ID!;
+      const accessResponse = await whopsdk.users.checkAccess(premiumAccessPassId, { id: userId });
+      hasAccess = accessResponse.has_access;
     } catch (error) {
       console.error("Access check failed:", error);
       hasAccess = false;

@@ -347,7 +347,7 @@ export function DashboardClient({
             
             {showProductTour && (
               <div className="mb-6">
-                <ProductTour experienceId={experienceId} />
+                <ProductTour experienceId={experienceId} companyId={companyId} />
               </div>
             )}
             
