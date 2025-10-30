@@ -15,9 +15,8 @@ export default async function ExperiencePage({
 		whopsdk.users.retrieve(userId),
 	]);
 
-	// const adminUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-	// let hasAccess = userId === adminUserId;
-	let hasAccess = false;
+	const adminUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
+	let hasAccess = userId === adminUserId;
 	
 	if (!hasAccess) {
 		try {
@@ -38,7 +37,7 @@ export default async function ExperiencePage({
 			companyName={experience.company.title}
 			userName={user.name || user.username}
 			hasAccess={hasAccess}
-			isAdmin={false}
+			isAdmin={userId === adminUserId}
 		/>
 	);
 }
