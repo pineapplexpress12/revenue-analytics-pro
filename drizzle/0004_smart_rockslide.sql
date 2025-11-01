@@ -1,0 +1,1 @@
+ALTER TABLE "benchmark_data" ADD COLUMN "contributing_companies" jsonb DEFAULT '[]'::jsonb NOT NULL;

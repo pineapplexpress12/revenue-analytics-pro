@@ -51,12 +51,16 @@ export async function GET(request: NextRequest) {
       period === "year" ? "month" : "month"
     );
 
-    const currentMRR = await calculateMRR(companyId);
-    
-    const dataWithMRR = timeSeriesData.map(item => ({
-      ...item,
-      mrr: currentMRR,
-    }));
+    const dataWithMRR = await Promise.all(
+      timeSeriesData.map(async (item) => {
+        const itemDate = new Date(item.date + '-01');
+        const historicalMRR = await calculateMRR(companyId, itemDate);
+        return {
+          ...item,
+          mrr: historicalMRR,
+        };
+      })
+    );
 
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);

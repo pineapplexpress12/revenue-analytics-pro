@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       orderByClause = desc(memberAnalytics.totalRevenue);
     }
 
-    // Get total count for pagination
+    // Get total count and aggregate stats for pagination
     const totalCountResult = await db
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(members)
@@ -79,6 +79,19 @@ export async function GET(request: NextRequest) {
       .where(and(...conditions));
     
     const totalCount = totalCountResult[0]?.count || 0;
+    
+    // Get aggregate stats (at-risk members, avg engagement)
+    const statsResult = await db
+      .select({
+        atRiskCount: sql<number>`cast(count(*) filter (where ${memberAnalytics.churnRiskScore} >= 60) as int)`,
+        avgEngagement: sql<number>`cast(avg(${memberAnalytics.engagementScore}) as float)`,
+      })
+      .from(members)
+      .leftJoin(memberAnalytics, eq(members.id, memberAnalytics.memberId))
+      .where(and(...conditions));
+    
+    const atRiskCount = statsResult[0]?.atRiskCount || 0;
+    const avgEngagement = statsResult[0]?.avgEngagement || 0;
 
     // Fetch members with analytics
     const membersList = await db
@@ -119,6 +132,10 @@ export async function GET(request: NextRequest) {
         page,
         totalPages: Math.ceil(totalCount / 50),
         totalCount,
+      },
+      stats: {
+        atRiskCount,
+        avgEngagement: Math.round(avgEngagement),
       },
     });
   } catch (error) {

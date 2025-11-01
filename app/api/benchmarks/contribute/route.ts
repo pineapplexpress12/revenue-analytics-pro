@@ -25,7 +25,12 @@ export async function POST(request: NextRequest) {
     const companyProducts = await db
       .select()
       .from(products)
-      .where(eq(products.companyId, companyId))
+      .where(
+        and(
+          eq(products.companyId, companyId),
+          eq(products.isApp, false)
+        )
+      )
       .limit(10);
 
     const niche = determineNiche(companyProducts);
@@ -44,8 +49,20 @@ export async function POST(request: NextRequest) {
 
     if (existingBenchmark.length > 0) {
       const current = existingBenchmark[0];
+      const contributingCompanies = (current.contributingCompanies as string[]) || [];
+      
+      if (contributingCompanies.includes(companyId)) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Already contributed',
+          niche, 
+          revenueRange 
+        });
+      }
+
       const currentSize = current.sampleSize;
       const newSize = currentSize + 1;
+      const newContributingCompanies = [...contributingCompanies, companyId];
 
       const newAvgMrr = ((parseFloat(current.avgMrr) * currentSize) + metrics.mrr) / newSize;
       const newAvgChurnRate = ((parseFloat(current.avgChurnRate) * currentSize) + metrics.churnRate) / newSize;
@@ -60,6 +77,7 @@ export async function POST(request: NextRequest) {
           avgLtv: newAvgLtv.toFixed(2),
           avgArpu: newAvgArpu.toFixed(2),
           sampleSize: newSize,
+          contributingCompanies: newContributingCompanies,
           updatedAt: new Date(),
         })
         .where(eq(benchmarkData.id, current.id));
@@ -72,6 +90,7 @@ export async function POST(request: NextRequest) {
         avgLtv: metrics.ltv.toFixed(2),
         avgArpu: metrics.arpu.toFixed(2),
         sampleSize: 1,
+        contributingCompanies: [companyId],
       });
     }
 

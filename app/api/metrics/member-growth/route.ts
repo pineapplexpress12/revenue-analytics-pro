@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { memberships, companies } from "@/lib/db/schema";
-import { eq, sql, and, gte, lte } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { startOfMonth, subMonths, format } from "date-fns";
 
 export async function GET(request: NextRequest) {
@@ -35,49 +35,45 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const monthlyData = [];
 
+    const allMemberships = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.companyId, companyId));
+
     for (let i = months - 1; i >= 0; i--) {
       const monthStart = startOfMonth(subMonths(now, i));
       const monthEnd = i === 0 ? now : startOfMonth(subMonths(now, i - 1));
+      const monthEndTime = monthEnd.getTime();
 
-      const totalMembers = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.companyId, companyId),
-            eq(memberships.status, "active"),
-            lte(memberships.startDate, monthEnd)
-          )
-        );
+      let totalMembers = 0;
+      let newMembers = 0;
+      let churnedMembers = 0;
 
-      const newMembers = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.companyId, companyId),
-            gte(memberships.startDate, monthStart),
-            lte(memberships.startDate, monthEnd)
-          )
-        );
-
-      const churnedMembers = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.companyId, companyId),
-            eq(memberships.status, "cancelled"),
-            gte(memberships.endDate, monthStart),
-            lte(memberships.endDate, monthEnd)
-          )
-        );
+      for (const membership of allMemberships) {
+        const startTime = new Date(membership.startDate).getTime();
+        const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
+        
+        if (startTime <= monthEndTime && endTime >= monthEndTime) {
+          totalMembers++;
+        }
+        
+        if (startTime >= monthStart.getTime() && startTime <= monthEndTime) {
+          newMembers++;
+        }
+        
+        if (membership.endDate) {
+          const cancelTime = new Date(membership.endDate).getTime();
+          if (cancelTime >= monthStart.getTime() && cancelTime <= monthEndTime) {
+            churnedMembers++;
+          }
+        }
+      }
 
       monthlyData.push({
         date: format(monthStart, "MMM yyyy"),
-        members: Number(totalMembers[0]?.count || 0),
-        newMembers: Number(newMembers[0]?.count || 0),
-        churnedMembers: Number(churnedMembers[0]?.count || 0),
+        members: totalMembers,
+        newMembers: newMembers,
+        churnedMembers: churnedMembers,
       });
     }
 

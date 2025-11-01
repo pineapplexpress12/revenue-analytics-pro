@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { products, plans, memberships, payments, companies } from "@/lib/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +33,12 @@ export async function GET(request: NextRequest) {
     const allProducts = await db
       .select()
       .from(products)
-      .where(eq(products.companyId, companyId));
+      .where(
+        and(
+          eq(products.companyId, companyId),
+          eq(products.isApp, false)
+        )
+      );
 
     const productMetrics = await Promise.all(
       allProducts.map(async (product) => {
@@ -44,83 +49,104 @@ export async function GET(request: NextRequest) {
 
         const planIds = productPlans.map((p) => p.id);
 
-        const activeMemberships = planIds.length > 0
-          ? await db
-              .select({ count: sql<number>`count(*)` })
-              .from(memberships)
-              .where(
-                and(
-                  eq(memberships.companyId, companyId),
-                  eq(memberships.status, "active"),
-                  sql`${memberships.planId} IN ${planIds}`
-                )
-              )
-          : [{ count: 0 }];
+        if (planIds.length === 0) {
+          return {
+            id: product.whopProductId,
+            name: product.name,
+            revenue: 0,
+            mrr: 0,
+            activeMembers: 0,
+            totalMembers: 0,
+            churnRate: 0,
+            plans: 0,
+          };
+        }
 
-        const totalMemberships = planIds.length > 0
-          ? await db
-              .select({ count: sql<number>`count(*)` })
-              .from(memberships)
-              .where(
-                and(
-                  eq(memberships.companyId, companyId),
-                  sql`${memberships.planId} IN ${planIds}`
-                )
-              )
-          : [{ count: 0 }];
+        const activeMemberships = await db
+          .select({ count: sql<number>`cast(count(*) as int)` })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.companyId, companyId),
+              eq(memberships.status, "active"),
+              inArray(memberships.planId, planIds)
+            )
+          );
 
-        const churnedMemberships = planIds.length > 0
-          ? await db
-              .select({ count: sql<number>`count(*)` })
-              .from(memberships)
-              .where(
-                and(
-                  eq(memberships.companyId, companyId),
-                  eq(memberships.status, "cancelled"),
-                  sql`${memberships.planId} IN ${planIds}`
-                )
-              )
-          : [{ count: 0 }];
+        const totalMemberships = await db
+          .select({ count: sql<number>`cast(count(*) as int)` })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.companyId, companyId),
+              inArray(memberships.planId, planIds)
+            )
+          );
 
-        const productRevenue = planIds.length > 0
-          ? await db
-              .select({ 
-                total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL)), 0)` 
-              })
-              .from(payments)
-              .innerJoin(memberships, eq(payments.memberId, memberships.memberId))
-              .where(
-                and(
-                  eq(payments.companyId, companyId),
-                  eq(payments.status, "succeeded"),
-                  sql`${memberships.planId} IN ${planIds}`
-                )
-              )
-          : [{ total: 0 }];
+        const churnedMemberships = await db
+          .select({ count: sql<number>`cast(count(*) as int)` })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.companyId, companyId),
+              eq(memberships.status, "cancelled"),
+              inArray(memberships.planId, planIds)
+            )
+          );
+
+        const productRevenue = await db
+          .select({ 
+            total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL)), 0)` 
+          })
+          .from(payments)
+          .innerJoin(memberships, eq(payments.memberId, memberships.memberId))
+          .where(
+            and(
+              eq(payments.companyId, companyId),
+              eq(payments.status, "succeeded"),
+              inArray(memberships.planId, planIds)
+            )
+          );
+
+        const activeMembershipsByPlan = await db
+          .select({
+            planId: memberships.planId,
+            count: sql<number>`cast(count(*) as int)`,
+          })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.companyId, companyId),
+              eq(memberships.status, "active"),
+              inArray(memberships.planId, planIds)
+            )
+          )
+          .groupBy(memberships.planId);
+
+        const membershipCountMap = new Map(
+          activeMembershipsByPlan.map(m => [m.planId, Number(m.count)])
+        );
 
         let mrr = 0;
         for (const plan of productPlans) {
-          const planMemberships = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(memberships)
-            .where(
-              and(
-                eq(memberships.companyId, companyId),
-                eq(memberships.planId, plan.id),
-                eq(memberships.status, "active")
-              )
-            );
-
-          const memberCount = Number(planMemberships[0]?.count || 0);
+          const memberCount = membershipCountMap.get(plan.id) || 0;
           const price = parseFloat(plan.price);
 
-          if (plan.billingPeriod === "monthly" || plan.billingPeriod === "month") {
+          const billingPeriod = plan.billingPeriod;
+          
+          if (billingPeriod === "monthly" || billingPeriod === "month" || billingPeriod === "30") {
             mrr += price * memberCount;
-          } else if (plan.billingPeriod === "yearly" || plan.billingPeriod === "year") {
+          } else if (billingPeriod === "yearly" || billingPeriod === "year" || billingPeriod === "365") {
             mrr += (price / 12) * memberCount;
-          } else if (typeof plan.billingPeriod === 'string' && plan.billingPeriod.match(/^\d+$/)) {
-            const days = parseInt(plan.billingPeriod);
-            mrr += (price / (days / 30)) * memberCount;
+          } else if (billingPeriod === "weekly" || billingPeriod === "week" || billingPeriod === "7") {
+            mrr += (price * 4.33) * memberCount;
+          } else if (billingPeriod === "daily" || billingPeriod === "day" || billingPeriod === "1") {
+            mrr += (price * 30) * memberCount;
+          } else if (typeof billingPeriod === 'string' && billingPeriod.match(/^\d+$/)) {
+            const days = parseInt(billingPeriod);
+            if (days > 0) {
+              mrr += (price * 30 / days) * memberCount;
+            }
           }
         }
 

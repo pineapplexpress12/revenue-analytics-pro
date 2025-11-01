@@ -30,11 +30,13 @@ export const products = pgTable("products", {
   description: text("description"),
   imageUrl: text("image_url"),
   isActive: boolean("is_active").default(true).notNull(),
+  isApp: boolean("is_app").default(false).notNull(),
   metadata: jsonb("metadata"),
   ...timestamps,
 }, (table) => ({
   companyIdIdx: index("products_company_id_idx").on(table.companyId),
   whopProductIdIdx: index("products_whop_product_id_idx").on(table.whopProductId),
+  isAppIdx: index("products_is_app_idx").on(table.isApp),
 }));
 
 // Plans table - represents pricing plans for products
@@ -304,6 +306,7 @@ export const benchmarkData = pgTable("benchmark_data", {
   avgLtv: decimal("avg_ltv", { precision: 10, scale: 2 }).notNull(),
   avgArpu: decimal("avg_arpu", { precision: 10, scale: 2 }).notNull(),
   sampleSize: integer("sample_size").notNull(),
+  contributingCompanies: jsonb("contributing_companies").default([]).notNull(),
   ...timestamps,
 }, (table) => ({
   nicheIdx: index("benchmark_data_niche_idx").on(table.niche),

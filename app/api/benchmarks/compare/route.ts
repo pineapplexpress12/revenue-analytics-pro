@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
     const companyProducts = await db
       .select()
       .from(products)
-      .where(eq(products.companyId, companyId))
+      .where(
+        and(
+          eq(products.companyId, companyId),
+          eq(products.isApp, false)
+        )
+      )
       .limit(10);
 
     const niche = determineNiche(companyProducts);

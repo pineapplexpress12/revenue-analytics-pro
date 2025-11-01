@@ -17,6 +17,7 @@ import {
 } from "@/lib/whop-fetchers";
 import { whopsdk } from "@/lib/whop-sdk";
 import { eq } from "drizzle-orm";
+import { invalidateMetricCache } from "@/lib/metrics-cache";
 
 export async function POST(request: NextRequest) {
   const startedAt = new Date();
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest) {
 
     const whopProducts = await fetchAllProducts(companyId);
     for (const product of whopProducts) {
+      const productData = product as any;
+      const isApp = !!(productData.experiences && Array.isArray(productData.experiences) && productData.experiences.length > 0);
+      
       await db
         .insert(products)
         .values({
@@ -81,6 +85,7 @@ export async function POST(request: NextRequest) {
           whopProductId: product.id,
           name: product.title,
           description: product.description,
+          isApp: isApp,
           metadata: product,
         })
         .onConflictDoUpdate({
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
           set: {
             name: product.title,
             description: product.description,
+            isApp: isApp,
             metadata: product,
           },
         });
@@ -99,21 +105,23 @@ export async function POST(request: NextRequest) {
       whopPlans.push(plan);
     }
     
+    const dbProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.companyId, dbCompanyId));
+    
+    const productMap = new Map(dbProducts.map(p => [p.whopProductId, p.id]));
+    
     for (const plan of whopPlans) {
       if (!plan.product?.id) continue;
       
-      const dbProduct = await db
-        .select()
-        .from(products)
-        .where(eq(products.whopProductId, plan.product.id))
-        .limit(1);
-      
-      if (!dbProduct[0]) continue;
+      const productId = productMap.get(plan.product.id);
+      if (!productId) continue;
       
       await db
         .insert(plans)
         .values({
-          productId: dbProduct[0].id,
+          productId: productId,
           whopPlanId: plan.id,
           name: plan.description || "Default Plan",
           price: String(plan.initial_price || 0),
@@ -136,6 +144,17 @@ export async function POST(request: NextRequest) {
     for (const member of whopMembers) {
       if (!member.user?.id) continue;
       
+      let memberCreatedAt = new Date();
+      if (member.created_at) {
+        const timestamp = Number(member.created_at);
+        if (!isNaN(timestamp) && timestamp > 0) {
+          const date = new Date(timestamp * 1000);
+          if (!isNaN(date.getTime())) {
+            memberCreatedAt = date;
+          }
+        }
+      }
+      
       await db
         .insert(members)
         .values({
@@ -144,106 +163,120 @@ export async function POST(request: NextRequest) {
           email: "",
           username: member.user.username || "",
           metadata: member,
+          createdAt: memberCreatedAt,
+          updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: members.whopUserId,
           set: {
             username: member.user.username || "",
             metadata: member,
+            updatedAt: new Date(),
           },
         });
     }
     await logSync("members", "completed", whopMembers.length);
 
     const whopMemberships = await fetchAllMemberships(companyId);
+    
+    const dbMembers = await db
+      .select()
+      .from(members)
+      .where(eq(members.companyId, dbCompanyId));
+    
+    const dbPlans = await db
+      .select()
+      .from(plans)
+      .innerJoin(products, eq(products.id, plans.productId))
+      .where(eq(products.companyId, dbCompanyId));
+    
+    const memberMap = new Map(dbMembers.map(m => [m.whopUserId, m.id]));
+    const planMap = new Map(dbPlans.map(p => [p.plans.whopPlanId, { planId: p.plans.id, productId: p.plans.productId }]));
+    
     for (const membership of whopMemberships) {
       const userId = membership.user?.id;
       const planId = membership.plan?.id;
       
       if (!userId || !planId) continue;
       
-      const dbMember = await db
-        .select()
-        .from(members)
-        .where(eq(members.whopUserId, userId))
-        .limit(1);
-
-      const dbPlan = await db
-        .select()
-        .from(plans)
-        .where(eq(plans.whopPlanId, planId))
-        .limit(1);
+      const memberId = memberMap.get(userId);
+      const planInfo = planMap.get(planId);
       
-      if (!dbPlan[0]) continue;
-      
-      const dbProduct = await db
-        .select()
-        .from(products)
-        .where(eq(products.id, dbPlan[0].productId))
-        .limit(1);
+      if (!memberId || !planInfo) continue;
 
-      if (dbMember[0] && dbProduct[0]) {
-        await db
-          .insert(memberships)
-          .values({
-            companyId: dbCompanyId,
-            memberId: dbMember[0].id,
-            productId: dbProduct[0].id,
-            planId: dbPlan[0].id,
-            whopMembershipId: membership.id,
-            status: membership.status,
-            startDate: new Date(Number(membership.created_at) * 1000),
-            endDate: membership.renewal_period_end
-              ? new Date(Number(membership.renewal_period_end) * 1000)
-              : null,
-            metadata: membership,
-          })
-          .onConflictDoUpdate({
-            target: memberships.whopMembershipId,
-            set: {
-              status: membership.status,
-              endDate: membership.renewal_period_end
-                ? new Date(Number(membership.renewal_period_end) * 1000)
-                : null,
-              metadata: membership,
-            },
-          });
+      const startTimestamp = Number(membership.created_at);
+      const startDate = !isNaN(startTimestamp) && startTimestamp > 0 
+        ? new Date(startTimestamp * 1000) 
+        : new Date();
+      
+      let endDate = null;
+      if (membership.renewal_period_end) {
+        const endTimestamp = Number(membership.renewal_period_end);
+        if (!isNaN(endTimestamp) && endTimestamp > 0) {
+          const date = new Date(endTimestamp * 1000);
+          if (!isNaN(date.getTime())) {
+            endDate = date;
+          }
+        }
       }
+
+      await db
+        .insert(memberships)
+        .values({
+          companyId: dbCompanyId,
+          memberId: memberId,
+          productId: planInfo.productId,
+          planId: planInfo.planId,
+          whopMembershipId: membership.id,
+          status: membership.status,
+          startDate: startDate,
+          endDate: endDate,
+          metadata: membership,
+        })
+        .onConflictDoUpdate({
+          target: memberships.whopMembershipId,
+          set: {
+            status: membership.status,
+            endDate: endDate,
+            metadata: membership,
+          },
+        });
     }
     await logSync("memberships", "completed", whopMemberships.length);
 
     const whopPayments = await fetchAllPayments(companyId);
+    
     for (const payment of whopPayments) {
       const userId = payment.user?.id;
       if (!userId) continue;
       
-      const dbMember = await db
-        .select()
-        .from(members)
-        .where(eq(members.whopUserId, userId))
-        .limit(1);
+      const memberId = memberMap.get(userId);
+      if (!memberId) continue;
 
-      if (dbMember[0]) {
-        await db
-          .insert(payments)
-          .values({
-            companyId: dbCompanyId,
-            memberId: dbMember[0].id,
-            whopPaymentId: payment.id,
-            amount: String(Number(payment.subtotal) / 100),
-            currency: payment.currency || "usd",
+      const paymentTimestamp = Number(payment.created_at);
+      const paymentDate = !isNaN(paymentTimestamp) && paymentTimestamp > 0
+        ? new Date(paymentTimestamp * 1000)
+        : new Date();
+
+      await db
+        .insert(payments)
+        .values({
+          companyId: dbCompanyId,
+          memberId: memberId,
+          whopPaymentId: payment.id,
+          amount: String(Number(payment.subtotal) / 100),
+          currency: payment.currency || "usd",
+          status: payment.status || "succeeded",
+          paymentDate: paymentDate,
+          metadata: payment,
+        })
+        .onConflictDoUpdate({
+          target: payments.whopPaymentId,
+          set: {
             status: payment.status || "succeeded",
-            paymentDate: new Date(Number(payment.created_at) * 1000),
             metadata: payment,
-          })
-          .onConflictDoUpdate({
-            target: payments.whopPaymentId,
-            set: {
-              status: payment.status || "succeeded",
-              metadata: payment,
-            },
-          });
-      }
+          },
+        });
     }
     await logSync("payments", "completed", whopPayments.length);
 
@@ -251,6 +284,8 @@ export async function POST(request: NextRequest) {
       .update(companies)
       .set({ updatedAt: new Date() })
       .where(eq(companies.id, dbCompanyId));
+
+    await invalidateMetricCache(dbCompanyId);
 
     return NextResponse.json({
       success: true,

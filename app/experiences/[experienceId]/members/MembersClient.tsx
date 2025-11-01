@@ -39,6 +39,9 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
   const [filterRisk, setFilterRisk] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [atRiskCount, setAtRiskCount] = useState(0);
+  const [avgEngagementScore, setAvgEngagementScore] = useState(0);
 
   useEffect(() => {
     fetchMembers();
@@ -60,6 +63,9 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
         const data = await response.json();
         setMembers(data.members);
         setTotalPages(data.pagination.totalPages);
+        setTotalCount(data.pagination.totalCount);
+        setAtRiskCount(data.stats.atRiskCount);
+        setAvgEngagementScore(data.stats.avgEngagement);
       }
     } catch (error) {
       console.error('Failed to fetch members:', error);
@@ -80,10 +86,10 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
   };
 
   // Calculate stats
-  const totalMembers = members.length;
-  const atRiskMembers = members.filter(m => m.analytics && m.analytics.churnRiskScore >= 60).length;
+  const totalMembers = totalCount;
+  const atRiskMembers = atRiskCount;
   const vipMembers = Math.ceil(totalMembers * 0.1); // Top 10%
-  const avgEngagement = members.reduce((sum, m) => sum + (m.analytics?.engagementScore || 0), 0) / (totalMembers || 1);
+  const avgEngagement = avgEngagementScore;
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 min-h-screen">

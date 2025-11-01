@@ -201,6 +201,9 @@ export function DashboardClient({
   const handleSync = async () => {
     setSyncing(true);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
       const response = await fetch("/api/sync/initial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -208,12 +211,26 @@ export function DashboardClient({
           companyId,
           companyName,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         window.location.reload();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Sync failed:", errorData);
+        alert(`Sync failed: ${errorData.error || "Unknown error"}. Please try again.`);
+        setSyncing(false);
       }
     } catch (error) {
       console.error("Sync failed:", error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert("Sync is taking longer than expected. It may still be processing in the background. Please refresh the page in a minute.");
+      } else {
+        alert("Sync failed. Please check your connection and try again.");
+      }
       setSyncing(false);
     }
   };
@@ -221,18 +238,35 @@ export function DashboardClient({
   const handleGenerateTestData = async () => {
     setSyncing(true);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
       const response = await fetch("/api/sync/generate-test-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyId,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         window.location.reload();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Test data generation failed:", errorData);
+        alert(`Test data generation failed: ${errorData.error || "Unknown error"}. Please try again.`);
+        setSyncing(false);
       }
     } catch (error) {
       console.error("Test data generation failed:", error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert("Generation is taking longer than expected. It may still be processing in the background. Please refresh the page in a minute.");
+      } else {
+        alert("Test data generation failed. Please check your connection and try again.");
+      }
       setSyncing(false);
     }
   };

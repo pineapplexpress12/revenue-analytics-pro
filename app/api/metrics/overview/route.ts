@@ -66,7 +66,37 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    const churnRate = await calculateChurnRate(companyId, lastMonth, now);
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+    const previousMonthActiveMembers = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.companyId, companyId));
+
+    let previousActiveCount = 0;
+    const lastMonthTime = lastMonth.getTime();
+
+    for (const membership of previousMonthActiveMembers) {
+      const startTime = new Date(membership.startDate).getTime();
+      const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
+      
+      if (startTime <= lastMonthTime && endTime >= lastMonthTime) {
+        previousActiveCount++;
+      }
+    }
+
+    const memberGrowth = previousActiveCount > 0 
+      ? Math.round(((activeMembers.length - previousActiveCount) / previousActiveCount) * 100 * 10) / 10
+      : activeMembers.length > 0 ? 100 : 0;
+
+    const currentChurnRate = await calculateChurnRate(companyId, lastMonth, now);
+    const previousChurnRate = await calculateChurnRate(companyId, twoMonthsAgo, lastMonth);
+    
+    const churnChange = previousChurnRate > 0
+      ? Math.round(((currentChurnRate - previousChurnRate) / previousChurnRate) * 100 * 10) / 10
+      : 0;
+
     const ltv = await calculateLTV(companyId);
     const arpu = await calculateARPU(companyId);
 
@@ -75,9 +105,9 @@ export async function GET(request: NextRequest) {
       mrrGrowth: Math.round(mrrGrowth * 10) / 10,
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       activeMembers: activeMembers.length,
-      memberGrowth: 0,
-      churnRate: Math.round(churnRate * 10) / 10,
-      churnChange: 0,
+      memberGrowth: memberGrowth,
+      churnRate: Math.round(currentChurnRate * 10) / 10,
+      churnChange: churnChange,
       ltv: Math.round(ltv * 100) / 100,
       arpu: Math.round(arpu * 100) / 100,
     };
