@@ -44,36 +44,37 @@ export async function GET(request: NextRequest) {
       const monthStart = startOfMonth(subMonths(now, i));
       const monthEnd = i === 0 ? now : startOfMonth(subMonths(now, i - 1));
       const monthEndTime = monthEnd.getTime();
+      const monthStartTime = monthStart.getTime();
 
-      let totalMembers = 0;
-      let newMembers = 0;
-      let churnedMembers = 0;
+      const activeMemberIds = new Set<string>();
+      const newMemberIds = new Set<string>();
+      const churnedMemberIds = new Set<string>();
 
       for (const membership of allMemberships) {
         const startTime = new Date(membership.startDate).getTime();
         const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
         
         if (startTime <= monthEndTime && endTime >= monthEndTime) {
-          totalMembers++;
+          activeMemberIds.add(membership.memberId);
         }
         
-        if (startTime >= monthStart.getTime() && startTime <= monthEndTime) {
-          newMembers++;
+        if (startTime >= monthStartTime && startTime <= monthEndTime) {
+          newMemberIds.add(membership.memberId);
         }
         
         if (membership.endDate) {
           const cancelTime = new Date(membership.endDate).getTime();
-          if (cancelTime >= monthStart.getTime() && cancelTime <= monthEndTime) {
-            churnedMembers++;
+          if (cancelTime >= monthStartTime && cancelTime <= monthEndTime) {
+            churnedMemberIds.add(membership.memberId);
           }
         }
       }
 
       monthlyData.push({
         date: format(monthStart, "MMM yyyy"),
-        members: totalMembers,
-        newMembers: newMembers,
-        churnedMembers: churnedMembers,
+        members: activeMemberIds.size,
+        newMembers: newMemberIds.size,
+        churnedMembers: churnedMemberIds.size,
       });
     }
 

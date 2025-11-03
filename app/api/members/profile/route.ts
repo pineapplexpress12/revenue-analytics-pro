@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { members, memberAnalytics, memberships, payments, products, plans } from '@/lib/db/schema';
+import { members, memberAnalytics, memberships, payments, products, plans, companies } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { calculateChurnRisk, calculateEngagementScore } from '@/lib/analytics/member-scoring';
 
@@ -8,14 +8,29 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const memberId = searchParams.get('memberId');
-    const companyId = searchParams.get('companyId');
+    const whopCompanyId = searchParams.get('companyId');
     
-    if (!memberId || !companyId) {
+    if (!memberId || !whopCompanyId) {
       return NextResponse.json(
         { error: 'Member ID and Company ID are required' },
         { status: 400 }
       );
     }
+
+    const company = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.whopCompanyId, whopCompanyId))
+      .limit(1);
+
+    if (!company[0]) {
+      return NextResponse.json(
+        { error: 'Company not found' },
+        { status: 404 }
+      );
+    }
+
+    const companyId = company[0].id;
 
     // Get member data
     const memberData = await db

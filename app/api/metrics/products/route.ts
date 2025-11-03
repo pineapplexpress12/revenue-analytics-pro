@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL)), 0)` 
           })
           .from(payments)
-          .innerJoin(memberships, eq(payments.memberId, memberships.memberId))
+          .leftJoin(memberships, eq(payments.membershipId, memberships.id))
           .where(
             and(
               eq(payments.companyId, companyId),

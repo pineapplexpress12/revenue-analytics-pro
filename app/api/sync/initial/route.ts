@@ -145,7 +145,15 @@ export async function POST(request: NextRequest) {
       if (!member.user?.id) continue;
       
       let memberCreatedAt = new Date();
-      if (member.created_at) {
+      if (member.joined_at) {
+        const timestamp = Number(member.joined_at);
+        if (!isNaN(timestamp) && timestamp > 0) {
+          const date = new Date(timestamp * 1000);
+          if (!isNaN(date.getTime())) {
+            memberCreatedAt = date;
+          }
+        }
+      } else if (member.created_at) {
         const timestamp = Number(member.created_at);
         if (!isNaN(timestamp) && timestamp > 0) {
           const date = new Date(timestamp * 1000);
@@ -155,13 +163,20 @@ export async function POST(request: NextRequest) {
         }
       }
       
+      const memberData = member as any;
+      const email = member.user?.email || memberData.email || "";
+      const username = member.user?.username || "";
+      const name = memberData.user?.name || "";
+      const profilePictureUrl = memberData.user?.profile_pic_url || memberData.user?.profile_picture_url || null;
+      
       await db
         .insert(members)
         .values({
           companyId: dbCompanyId,
           whopUserId: member.user.id,
-          email: "",
-          username: member.user.username || "",
+          email: email,
+          username: username || name || email,
+          profilePictureUrl: profilePictureUrl,
           metadata: member,
           createdAt: memberCreatedAt,
           updatedAt: new Date(),
@@ -169,7 +184,9 @@ export async function POST(request: NextRequest) {
         .onConflictDoUpdate({
           target: members.whopUserId,
           set: {
-            username: member.user.username || "",
+            email: email,
+            username: username || name || email,
+            profilePictureUrl: profilePictureUrl,
             metadata: member,
             updatedAt: new Date(),
           },
