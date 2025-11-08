@@ -54,6 +54,7 @@ export async function calculateAndStoreMemberAnalytics(companyId: string) {
     await db
       .insert(memberAnalytics)
       .values({
+        companyId: companyId,
         memberId: member.id,
         totalRevenue: String(totalRevenue),
         totalPayments: memberPayments.filter((p) => p.status === "succeeded").length,

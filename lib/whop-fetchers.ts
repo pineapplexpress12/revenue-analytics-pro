@@ -47,8 +47,7 @@ export async function fetchAllMembers(companyId: string) {
   const allMembers = [];
   
   for await (const member of whopsdk.members.list({
-    company_id: companyId,
-    statuses: "active"
+    company_id: companyId
   })) {
     allMembers.push(member);
   }
