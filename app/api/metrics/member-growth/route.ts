@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { memberships, companies } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { startOfMonth, subMonths, format } from "date-fns";
+import { memberships, companies, members } from "@/lib/db/schema";
+import { eq, gte, lte, and } from "drizzle-orm";
+import { startOfMonth, subMonths, format, addMonths } from "date-fns";
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,9 +40,14 @@ export async function GET(request: NextRequest) {
       .from(memberships)
       .where(eq(memberships.companyId, companyId));
 
+    const allMembers = await db
+      .select()
+      .from(members)
+      .where(eq(members.companyId, companyId));
+
     for (let i = months - 1; i >= 0; i--) {
       const monthStart = startOfMonth(subMonths(now, i));
-      const monthEnd = i === 0 ? now : startOfMonth(subMonths(now, i - 1));
+      const monthEnd = addMonths(monthStart, 1);
       const monthEndTime = monthEnd.getTime();
       const monthStartTime = monthStart.getTime();
 
@@ -54,17 +59,23 @@ export async function GET(request: NextRequest) {
         const startTime = new Date(membership.startDate).getTime();
         const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
         
-        if (startTime <= monthEndTime && endTime >= monthEndTime) {
+        if (startTime < monthEndTime && endTime >= monthStartTime) {
           activeMemberIds.add(membership.memberId);
         }
+      }
+
+      for (const member of allMembers) {
+        const joinTime = new Date(member.createdAt).getTime();
         
-        if (startTime >= monthStartTime && startTime <= monthEndTime) {
-          newMemberIds.add(membership.memberId);
+        if (joinTime >= monthStartTime && joinTime < monthEndTime) {
+          newMemberIds.add(member.id);
         }
-        
-        if (membership.endDate) {
+      }
+
+      for (const membership of allMemberships) {
+        if (membership.endDate && membership.status !== "active") {
           const cancelTime = new Date(membership.endDate).getTime();
-          if (cancelTime >= monthStartTime && cancelTime <= monthEndTime) {
+          if (cancelTime >= monthStartTime && cancelTime < monthEndTime) {
             churnedMemberIds.add(membership.memberId);
           }
         }

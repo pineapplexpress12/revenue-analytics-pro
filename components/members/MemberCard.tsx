@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { getChurnRiskLabel } from '@/lib/analytics/member-scoring';
 import { AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
 
 interface MemberCardProps {
   member: {
@@ -22,6 +24,7 @@ interface MemberCardProps {
 }
 
 export function MemberCard({ member, companyId }: MemberCardProps) {
+  const [imageError, setImageError] = useState(false);
   const riskLevel = member.analytics 
     ? getChurnRiskLabel(member.analytics.churnRiskScore)
     : 'Low';
@@ -33,12 +36,17 @@ export function MemberCard({ member, companyId }: MemberCardProps) {
       <div className="whop-card hover:border-gray-600 transition-all cursor-pointer">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
-            {member.profilePictureUrl ? (
-              <img
-                src={member.profilePictureUrl}
-                alt={displayName}
-                className="w-12 h-12 rounded-full"
-              />
+            {member.profilePictureUrl && !imageError ? (
+              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-700">
+                <Image
+                  src={member.profilePictureUrl}
+                  alt={displayName}
+                  fill
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                  unoptimized
+                />
+              </div>
             ) : (
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
                 {displayName.charAt(0).toUpperCase()}

@@ -60,6 +60,8 @@ export async function GET(request: NextRequest) {
 
     const benchmark = benchmarks[0];
 
+    const actualSampleSize = (benchmark.contributingCompanies as string[] || []).length || benchmark.sampleSize;
+
     const comparison = {
       niche,
       revenueRange,
@@ -87,7 +89,7 @@ export async function GET(request: NextRequest) {
         percentile: calculatePercentile(myMetrics.arpu, { avgArpu: benchmark.avgArpu }),
         status: getStatus(myMetrics.arpu, parseFloat(benchmark.avgArpu)),
       },
-      sampleSize: benchmark.sampleSize,
+      sampleSize: actualSampleSize,
     };
 
     return NextResponse.json(comparison);

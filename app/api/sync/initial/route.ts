@@ -18,6 +18,7 @@ import {
 import { whopsdk } from "@/lib/whop-sdk";
 import { eq } from "drizzle-orm";
 import { invalidateMetricCache } from "@/lib/metrics-cache";
+import { calculateAndStoreMemberAnalytics } from "@/lib/analytics/calculate-member-analytics";
 
 export async function POST(request: NextRequest) {
   const startedAt = new Date();
@@ -75,9 +76,6 @@ export async function POST(request: NextRequest) {
 
     const whopProducts = await fetchAllProducts(companyId);
     for (const product of whopProducts) {
-      const productData = product as any;
-      const isApp = !!(productData.experiences && Array.isArray(productData.experiences) && productData.experiences.length > 0);
-      
       await db
         .insert(products)
         .values({
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
           whopProductId: product.id,
           name: product.title,
           description: product.description,
-          isApp: isApp,
+          isApp: false,
           metadata: product,
         })
         .onConflictDoUpdate({
@@ -93,7 +91,7 @@ export async function POST(request: NextRequest) {
           set: {
             name: product.title,
             description: product.description,
-            isApp: isApp,
+            isApp: false,
             metadata: product,
           },
         });
@@ -141,33 +139,42 @@ export async function POST(request: NextRequest) {
     await logSync("plans", "completed", whopPlans.length);
 
     const whopMembers = await fetchAllMembers(companyId);
+    const whopMemberships = await fetchAllMemberships(companyId);
+    
+    const userFirstSubscriptionMap = new Map<string, Date>();
+    for (const membership of whopMemberships) {
+      const userId = membership.user?.id;
+      if (!userId) continue;
+      
+      const startTimestamp = Number(membership.created_at);
+      if (!isNaN(startTimestamp) && startTimestamp > 0) {
+        const startDate = new Date(startTimestamp * 1000);
+        const existingDate = userFirstSubscriptionMap.get(userId);
+        if (!existingDate || startDate < existingDate) {
+          userFirstSubscriptionMap.set(userId, startDate);
+        }
+      }
+    }
+    
     for (const member of whopMembers) {
       if (!member.user?.id) continue;
       
-      let memberCreatedAt = new Date();
-      if (member.joined_at) {
-        const timestamp = Number(member.joined_at);
-        if (!isNaN(timestamp) && timestamp > 0) {
-          const date = new Date(timestamp * 1000);
-          if (!isNaN(date.getTime())) {
-            memberCreatedAt = date;
-          }
-        }
-      } else if (member.created_at) {
-        const timestamp = Number(member.created_at);
-        if (!isNaN(timestamp) && timestamp > 0) {
-          const date = new Date(timestamp * 1000);
-          if (!isNaN(date.getTime())) {
-            memberCreatedAt = date;
-          }
-        }
-      }
+      const memberCreatedAt = userFirstSubscriptionMap.get(member.user.id) || new Date();
       
       const memberData = member as any;
       const email = member.user?.email || memberData.email || "";
       const username = member.user?.username || "";
       const name = memberData.user?.name || "";
-      const profilePictureUrl = memberData.user?.profile_pic_url || memberData.user?.profile_picture_url || null;
+      const profilePictureUrl = 
+        memberData.user?.profile_pic_url || 
+        memberData.user?.profile_picture_url || 
+        memberData.user?.image_url ||
+        memberData.user?.avatar_url ||
+        member.user?.profile_pic_url ||
+        member.user?.profile_picture_url ||
+        member.user?.image_url ||
+        member.user?.avatar_url ||
+        null;
       
       await db
         .insert(members)
@@ -193,8 +200,6 @@ export async function POST(request: NextRequest) {
         });
     }
     await logSync("members", "completed", whopMembers.length);
-
-    const whopMemberships = await fetchAllMemberships(companyId);
     
     const dbMembers = await db
       .select()
@@ -301,6 +306,8 @@ export async function POST(request: NextRequest) {
       .update(companies)
       .set({ updatedAt: new Date() })
       .where(eq(companies.id, dbCompanyId));
+
+    await calculateAndStoreMemberAnalytics(dbCompanyId);
 
     await invalidateMetricCache(dbCompanyId);
 

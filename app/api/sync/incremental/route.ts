@@ -14,6 +14,7 @@ import {
   fetchPaymentsSince,
 } from "@/lib/whop-fetchers";
 import { eq } from "drizzle-orm";
+import { calculateAndStoreMemberAnalytics } from "@/lib/analytics/calculate-member-analytics";
 
 export async function POST(request: NextRequest) {
   try {
@@ -149,6 +150,8 @@ export async function POST(request: NextRequest) {
           .update(companies)
           .set({ updatedAt: new Date() })
           .where(eq(companies.id, company.id));
+
+        await calculateAndStoreMemberAnalytics(company.id);
 
         results.push({
           companyId: company.whopCompanyId,

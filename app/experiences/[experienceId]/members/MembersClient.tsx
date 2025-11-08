@@ -42,6 +42,7 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
   const [totalCount, setTotalCount] = useState(0);
   const [atRiskCount, setAtRiskCount] = useState(0);
   const [avgEngagementScore, setAvgEngagementScore] = useState(0);
+  const [vipCount, setVipCount] = useState(0);
 
   useEffect(() => {
     fetchMembers();
@@ -66,6 +67,7 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
         setTotalCount(data.pagination.totalCount);
         setAtRiskCount(data.stats.atRiskCount);
         setAvgEngagementScore(data.stats.avgEngagement);
+        setVipCount(data.stats.vipCount);
       }
     } catch (error) {
       console.error('Failed to fetch members:', error);
@@ -88,32 +90,32 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
   // Calculate stats
   const totalMembers = totalCount;
   const atRiskMembers = atRiskCount;
-  const vipMembers = Math.ceil(totalMembers * 0.1); // Top 10%
+  const vipMembers = vipCount;
   const avgEngagement = avgEngagementScore;
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Navigation Tabs */}
-        <div className="border-b border-[var(--whop-border)]">
-          <nav className="flex gap-6">
+        <div className="border-b border-[var(--whop-border)] overflow-x-auto">
+          <nav className="flex gap-4 sm:gap-6 min-w-max">
             <Link
               href={`/experiences/${experienceId}`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-[var(--whop-border)] transition-colors whitespace-nowrap"
             >
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
             </Link>
             <Link
               href={`/experiences/${experienceId}/members`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-[var(--whop-accent)] text-[var(--whop-accent)] font-medium"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-[var(--whop-accent)] text-[var(--whop-accent)] font-medium whitespace-nowrap"
             >
               <UserCircle className="h-4 w-4" />
               Members
             </Link>
             <Link
               href={`/experiences/${experienceId}/failed-payments`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-[var(--whop-border)] transition-colors whitespace-nowrap"
             >
               <CreditCard className="h-4 w-4" />
               Failed Payments
@@ -132,7 +134,7 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
         </div>
         
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
           <MetricCard
             title="Total Members"
             value={totalMembers}
@@ -147,7 +149,7 @@ export function MembersClient({ companyId, experienceId }: MembersClientProps) {
           <MetricCard
             title="VIP Members"
             value={vipMembers}
-            description="Top 10% by revenue"
+            description="$100+ revenue & 70+ engagement"
             icon={Crown}
           />
           <MetricCard

@@ -281,7 +281,7 @@ export function DashboardClient({
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <h1 className="text-9 font-bold mb-4 text-gray-12">Loading...</h1>
+            <h1 className="text-3xl font-bold mb-4 text-[var(--whop-text-primary)]">Loading...</h1>
           </div>
         </div>
       </div>
@@ -292,25 +292,25 @@ export function DashboardClient({
     <div className="py-8 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Navigation Tabs */}
-        <div className="mb-6 border-b border-[var(--whop-border)]">
-          <nav className="flex gap-6">
+        <div className="mb-6 border-b border-[var(--whop-border)] overflow-x-auto">
+          <nav className="flex gap-4 sm:gap-6 min-w-max">
             <Link
               href={`/experiences/${experienceId}`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-[var(--whop-accent)] text-[var(--whop-accent)] font-medium"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-[var(--whop-accent)] text-[var(--whop-accent)] font-medium whitespace-nowrap"
             >
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
             </Link>
             <Link
               href={`/experiences/${experienceId}/members`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-[var(--whop-border)] transition-colors whitespace-nowrap"
             >
               <UserCircle className="h-4 w-4" />
               Members
             </Link>
             <Link
               href={`/experiences/${experienceId}/failed-payments`}
-              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-gray-600 transition-colors"
+              className="flex items-center gap-2 px-1 py-3 border-b-2 border-transparent text-[var(--whop-text-secondary)] hover:text-[var(--whop-text-primary)] hover:border-[var(--whop-border)] transition-colors whitespace-nowrap"
             >
               <CreditCard className="h-4 w-4" />
               Failed Payments
@@ -319,12 +319,12 @@ export function DashboardClient({
         </div>
 
         <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-9 font-bold mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-[var(--whop-text-primary)]">
                 Revenue Analytics Dashboard
               </h1>
-              <p className="text-4 text-gray-11">
+              <p className="text-sm sm:text-base text-[var(--whop-text-secondary)]">
                 Welcome back, {userName}! Track your key metrics for {companyName}
               </p>
             </div>
@@ -333,18 +333,20 @@ export function DashboardClient({
             )}
           </div>
           {metrics && (
-            <div className="flex items-center gap-4">
-              <DateRangePicker 
-                onDateRangeChange={(start, end, compareStart, compareEnd) => 
-                  setDateRange({ start, end, compareStart, compareEnd })
-                }
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <div className="w-full sm:w-auto">
+                <DateRangePicker 
+                  onDateRangeChange={(start, end, compareStart, compareEnd) => 
+                    setDateRange({ start, end, compareStart, compareEnd })
+                  }
+                />
+              </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Revenue view:</span>
+                <span className="text-sm text-[var(--whop-text-secondary)] whitespace-nowrap">Revenue view:</span>
                 <select
                   value={revenuePeriod}
                   onChange={(e) => setRevenuePeriod(e.target.value as 'day' | 'week' | 'month')}
-                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-medium shadow-sm"
+                  className="w-full sm:w-auto px-3 py-2 bg-[var(--whop-bg)] border border-[var(--whop-border)] rounded-lg text-[var(--whop-text-primary)] text-sm font-medium shadow-sm"
                 >
                   <option value="day">Daily</option>
                   <option value="week">Weekly</option>
@@ -355,18 +357,66 @@ export function DashboardClient({
           )}
         </div>
 
+        {syncing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/80" />
+            <div className="relative w-full max-w-2xl mx-4 bg-[var(--whop-card-bg)] border border-[var(--whop-border)] rounded-xl shadow-2xl p-8">
+              <div className="flex flex-col items-center justify-center">
+                <div className="mb-8">
+                  <div className="h-16 w-16 relative">
+                    <div className="absolute inset-0 border-4 border-[var(--whop-accent)]/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-[var(--whop-accent)] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-[var(--whop-text-primary)] mb-2">
+                  Syncing Your Data...
+                </h2>
+                <p className="text-[var(--whop-text-secondary)] mb-8">
+                  This usually takes 2-3 minutes. Please don't close this window.
+                </p>
+                <div className="w-full max-w-md space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-[var(--whop-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                    </div>
+                    Fetching products and plans
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-[var(--whop-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                    </div>
+                    Fetching members data
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-[var(--whop-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                    </div>
+                    Analyzing payment history
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-[var(--whop-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--whop-accent)]/20 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-[var(--whop-accent)] animate-pulse" />
+                    </div>
+                    Calculating analytics
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!metrics ? (
-          <div className="bg-gray-a2 border border-gray-a4 rounded-3xl p-8 text-center">
-            <h2 className="text-7 font-semibold mb-4 text-gray-12">
+          <div className="bg-[var(--whop-card-bg)] border border-[var(--whop-border)] rounded-xl p-8 text-center">
+            <h2 className="text-2xl font-semibold mb-4 text-[var(--whop-text-primary)]">
               Welcome to Revenue Analytics Pro
             </h2>
-            <p className="text-4 text-gray-11 mb-6">
+            <p className="text-base text-[var(--whop-text-secondary)] mb-6">
               Get started by syncing your Whop data to see your analytics
             </p>
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="bg-purple-9 text-white px-6 py-3 rounded-2 font-medium hover:bg-purple-10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[var(--whop-accent)] text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {syncing ? "Syncing..." : "Sync Data Now"}
             </button>
@@ -479,7 +529,7 @@ export function DashboardClient({
 
             <div className="whop-card">
               <h2 className="text-lg font-semibold mb-6 text-[var(--whop-text-primary)]">Quick Stats</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="border-l-4 border-purple-500 pl-4">
                   <p className="text-sm text-[var(--whop-text-secondary)]">Growth Rate</p>
                   <p className="text-2xl font-bold text-purple-400 mt-1">
@@ -501,11 +551,11 @@ export function DashboardClient({
               </div>
             </div>
 
-            <div className="mt-8 flex justify-center gap-4">
+            <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <button
                 onClick={handleSync}
                 disabled={syncing}
-                className="px-6 py-3 text-sm rounded-lg bg-[var(--whop-accent)] text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="w-full sm:w-auto px-6 py-3 text-sm rounded-lg bg-[var(--whop-accent)] text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {syncing ? "Syncing..." : "Refresh Data"}
               </button>
@@ -513,7 +563,7 @@ export function DashboardClient({
                 <button
                   onClick={handleGenerateTestData}
                   disabled={syncing}
-                  className="px-6 py-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="w-full sm:w-auto px-6 py-3 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {syncing ? "Generating..." : "Generate Test Data"}
                 </button>

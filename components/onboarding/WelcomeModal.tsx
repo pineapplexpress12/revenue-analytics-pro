@@ -133,12 +133,7 @@ export function WelcomeModal({ open, onClose, companyName }: WelcomeModalProps) 
   const steps = [
     {
       title: "Welcome to Revenue Analytics Pro!",
-      description: `We're syncing your ${companyName} data now. This takes about 2-3 minutes.`,
-      content: <SyncingAnimation />
-    },
-    {
-      title: "Unique Features You'll Love",
-      description: "Here's what makes us different from Whop's basic analytics",
+      description: `Your ${companyName} data is ready! Let's explore what you can do.`,
       content: <FeatureHighlights />
     },
     {

@@ -6,15 +6,26 @@
 @import "@whop/react/styles.css";
 
 :root {
-	--whop-bg: #0A0A0A;
-	--whop-card-bg: #141414;
-	--whop-border: #262626;
-	--whop-text-primary: #FFFFFF;
-	--whop-text-secondary: #A3A3A3;
-	--whop-text-tertiary: #737373;
+	--whop-bg: #FFFFFF;
+	--whop-card-bg: #F9FAFB;
+	--whop-border: #E5E7EB;
+	--whop-text-primary: #111827;
+	--whop-text-secondary: #6B7280;
+	--whop-text-tertiary: #9CA3AF;
 	--whop-accent: #3B82F6;
 	--whop-success: #22C55E;
 	--whop-danger: #EF4444;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--whop-bg: #0A0A0A;
+		--whop-card-bg: #141414;
+		--whop-border: #262626;
+		--whop-text-primary: #FFFFFF;
+		--whop-text-secondary: #A3A3A3;
+		--whop-text-tertiary: #737373;
+	}
 }
 
 body {
@@ -31,6 +42,7 @@ body {
 }
 
 .whop-card:hover {
-	border-color: #404040;
-	transition: border-color 0.2s;
+	border-color: var(--whop-border);
+	opacity: 0.95;
+	transition: all 0.2s;
 }

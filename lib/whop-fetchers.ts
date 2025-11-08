@@ -32,7 +32,12 @@ export async function fetchAllProducts(companyId: string) {
   const products = [];
   for await (const productListItem of listResponse) {
     const fullProduct = await whopsdk.products.retrieve(productListItem.id);
-    products.push(fullProduct);
+    const productData = fullProduct as any;
+    const hasExperiences = !!(productData.experiences && Array.isArray(productData.experiences) && productData.experiences.length > 0);
+    
+    if (!hasExperiences) {
+      products.push(fullProduct);
+    }
   }
   
   return products;
@@ -42,7 +47,8 @@ export async function fetchAllMembers(companyId: string) {
   const allMembers = [];
   
   for await (const member of whopsdk.members.list({
-    company_id: companyId
+    company_id: companyId,
+    statuses: "active"
   })) {
     allMembers.push(member);
   }

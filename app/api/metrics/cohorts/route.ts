@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { memberships, companies } from "@/lib/db/schema";
-import { eq, sql, and, gte, lte } from "drizzle-orm";
+import { memberships, companies, members } from "@/lib/db/schema";
+import { eq, sql, and, gte, lte, lt } from "drizzle-orm";
 import { startOfMonth, addMonths, format, differenceInMonths } from "date-fns";
 
 export async function GET(request: NextRequest) {
@@ -41,18 +41,29 @@ export async function GET(request: NextRequest) {
 
       const cohortMembers = await db
         .select()
-        .from(memberships)
+        .from(members)
         .where(
           and(
-            eq(memberships.companyId, companyId),
-            gte(memberships.startDate, cohortMonth),
-            lte(memberships.startDate, cohortEnd)
+            eq(members.companyId, companyId),
+            gte(members.createdAt, cohortMonth),
+            lt(members.createdAt, cohortEnd)
           )
         );
 
       const cohortSize = cohortMembers.length;
       
       if (cohortSize === 0) continue;
+
+      const memberIds = cohortMembers.map(m => m.id);
+      const cohortMemberships = await db
+        .select()
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.companyId, companyId),
+            sql`${memberships.memberId} IN ${memberIds}`
+          )
+        );
 
       const retention = {
         month0: 100,
@@ -70,14 +81,19 @@ export async function GET(request: NextRequest) {
           break;
         }
 
-        const activeMembers = cohortMembers.filter((membership) => {
-          const membershipActive = membership.status === "active" || 
-            (membership.endDate && new Date(membership.endDate) >= checkDate);
+        const activeMemberIds = new Set<string>();
+        
+        for (const membership of cohortMemberships) {
+          const startTime = new Date(membership.startDate).getTime();
+          const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
+          const checkTime = checkDate.getTime();
           
-          return membershipActive;
-        });
+          if (startTime <= checkTime && endTime >= checkTime) {
+            activeMemberIds.add(membership.memberId);
+          }
+        }
 
-        const retentionRate = (activeMembers.length / cohortSize) * 100;
+        const retentionRate = (activeMemberIds.size / cohortSize) * 100;
         
         switch (monthOffset) {
           case 1:
