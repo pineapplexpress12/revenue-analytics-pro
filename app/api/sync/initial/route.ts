@@ -165,15 +165,16 @@ export async function POST(request: NextRequest) {
       const email = member.user?.email || memberData.email || "";
       const username = member.user?.username || "";
       const name = memberData.user?.name || "";
+      const userData = member.user as any;
       const profilePictureUrl = 
         memberData.user?.profile_pic_url || 
         memberData.user?.profile_picture_url || 
         memberData.user?.image_url ||
         memberData.user?.avatar_url ||
-        member.user?.profile_pic_url ||
-        member.user?.profile_picture_url ||
-        member.user?.image_url ||
-        member.user?.avatar_url ||
+        userData?.profile_pic_url ||
+        userData?.profile_picture_url ||
+        userData?.image_url ||
+        userData?.avatar_url ||
         null;
       
       await db
