@@ -5,7 +5,7 @@ import { calculateChurnRate } from "@/lib/metrics/churn";
 import { calculateLTV } from "@/lib/metrics/ltv";
 import { db } from "@/lib/db";
 import { memberships, companies } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getCachedMetric, setCachedMetric } from "@/lib/metrics-cache";
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -56,15 +56,18 @@ export async function GET(request: NextRequest) {
     
     const totalRevenue = await calculateTotalRevenue(companyId);
     
-    const activeMembers = await db
-      .select()
+    const activeMembershipsResult = await db
+      .select({ memberId: memberships.memberId })
       .from(memberships)
       .where(
         and(
           eq(memberships.companyId, companyId),
-          eq(memberships.status, "active")
+          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
         )
-      );
+      )
+      .groupBy(memberships.memberId);
+    
+    const activeMembersCount = activeMembershipsResult.length;
 
     const twoMonthsAgo = new Date();
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
@@ -72,9 +75,14 @@ export async function GET(request: NextRequest) {
     const previousMonthActiveMembers = await db
       .select()
       .from(memberships)
-      .where(eq(memberships.companyId, companyId));
+      .where(
+        and(
+          eq(memberships.companyId, companyId),
+          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
+        )
+      );
 
-    let previousActiveCount = 0;
+    const previousActiveMemberIds = new Set<string>();
     const lastMonthTime = lastMonth.getTime();
 
     for (const membership of previousMonthActiveMembers) {
@@ -82,13 +90,15 @@ export async function GET(request: NextRequest) {
       const endTime = membership.endDate ? new Date(membership.endDate).getTime() : Date.now();
       
       if (startTime <= lastMonthTime && endTime >= lastMonthTime) {
-        previousActiveCount++;
+        previousActiveMemberIds.add(membership.memberId);
       }
     }
 
+    const previousActiveCount = previousActiveMemberIds.size;
+
     const memberGrowth = previousActiveCount > 0 
-      ? Math.round(((activeMembers.length - previousActiveCount) / previousActiveCount) * 100 * 10) / 10
-      : activeMembers.length > 0 ? 100 : 0;
+      ? Math.round(((activeMembersCount - previousActiveCount) / previousActiveCount) * 100 * 10) / 10
+      : activeMembersCount > 0 ? 100 : 0;
 
     const currentChurnRate = await calculateChurnRate(companyId, lastMonth, now);
     const previousChurnRate = await calculateChurnRate(companyId, twoMonthsAgo, lastMonth);
@@ -104,7 +114,7 @@ export async function GET(request: NextRequest) {
       mrr: Math.round(mrr * 100) / 100,
       mrrGrowth: Math.round(mrrGrowth * 10) / 10,
       totalRevenue: Math.round(totalRevenue * 100) / 100,
-      activeMembers: activeMembers.length,
+      activeMembers: activeMembersCount,
       memberGrowth: memberGrowth,
       churnRate: Math.round(currentChurnRate * 10) / 10,
       churnChange: churnChange,

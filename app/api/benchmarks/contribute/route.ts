@@ -6,14 +6,14 @@ import { getRevenueRange, determineNiche } from '@/lib/benchmarking/utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const { companyId } = await request.json();
+    const { companyId: whopCompanyId } = await request.json();
 
-    if (!companyId) {
+    if (!whopCompanyId) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
     }
 
     const metricsResponse = await fetch(
-      `${request.nextUrl.origin}/api/metrics/overview?companyId=${companyId}`
+      `${request.nextUrl.origin}/api/metrics/overview?companyId=${whopCompanyId}`
     );
     
     if (!metricsResponse.ok) {
@@ -22,12 +22,24 @@ export async function POST(request: NextRequest) {
 
     const metrics = await metricsResponse.json();
 
+    const company = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.whopCompanyId, whopCompanyId))
+      .limit(1);
+
+    if (!company[0]) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+
+    const dbCompanyId = company[0].id;
+
     const companyProducts = await db
       .select()
       .from(products)
       .where(
         and(
-          eq(products.companyId, companyId),
+          eq(products.companyId, dbCompanyId),
           eq(products.isApp, false)
         )
       )
@@ -51,7 +63,7 @@ export async function POST(request: NextRequest) {
       const current = existingBenchmark[0];
       const contributingCompanies = (current.contributingCompanies as string[]) || [];
       
-      if (contributingCompanies.includes(companyId)) {
+      if (contributingCompanies.includes(whopCompanyId)) {
         return NextResponse.json({ 
           success: true, 
           message: 'Already contributed',
@@ -62,7 +74,7 @@ export async function POST(request: NextRequest) {
 
       const currentSize = current.sampleSize;
       const newSize = currentSize + 1;
-      const newContributingCompanies = [...contributingCompanies, companyId];
+      const newContributingCompanies = [...contributingCompanies, whopCompanyId];
 
       const newAvgMrr = ((parseFloat(current.avgMrr) * currentSize) + metrics.mrr) / newSize;
       const newAvgChurnRate = ((parseFloat(current.avgChurnRate) * currentSize) + metrics.churnRate) / newSize;
@@ -90,7 +102,7 @@ export async function POST(request: NextRequest) {
         avgLtv: metrics.ltv.toFixed(2),
         avgArpu: metrics.arpu.toFixed(2),
         sampleSize: 1,
-        contributingCompanies: [companyId],
+        contributingCompanies: [whopCompanyId],
       });
     }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { memberships, companies, members } from "@/lib/db/schema";
-import { eq, gte, lte, and } from "drizzle-orm";
+import { memberships, companies } from "@/lib/db/schema";
+import { eq, gte, lte, and, sql } from "drizzle-orm";
 import { startOfMonth, subMonths, format, addMonths } from "date-fns";
 
 export async function GET(request: NextRequest) {
@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
     const allMemberships = await db
       .select()
       .from(memberships)
-      .where(eq(memberships.companyId, companyId));
-
-    const allMembers = await db
-      .select()
-      .from(members)
-      .where(eq(members.companyId, companyId));
+      .where(
+        and(
+          eq(memberships.companyId, companyId),
+          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
+        )
+      );
 
     for (let i = months - 1; i >= 0; i--) {
       const monthStart = startOfMonth(subMonths(now, i));
@@ -62,13 +62,15 @@ export async function GET(request: NextRequest) {
         if (startTime < monthEndTime && endTime >= monthStartTime) {
           activeMemberIds.add(membership.memberId);
         }
-      }
-
-      for (const member of allMembers) {
-        const joinTime = new Date(member.createdAt).getTime();
         
-        if (joinTime >= monthStartTime && joinTime < monthEndTime) {
-          newMemberIds.add(member.id);
+        if (startTime >= monthStartTime && startTime < monthEndTime) {
+          const earlierMemberships = allMemberships.filter(m => 
+            m.memberId === membership.memberId && 
+            new Date(m.startDate).getTime() < startTime
+          );
+          if (earlierMemberships.length === 0) {
+            newMemberIds.add(membership.memberId);
+          }
         }
       }
 

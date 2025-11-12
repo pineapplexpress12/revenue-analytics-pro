@@ -201,9 +201,6 @@ export function DashboardClient({
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-
       const response = await fetch("/api/sync/initial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -211,26 +208,46 @@ export function DashboardClient({
           companyId,
           companyName,
         }),
-        signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        window.location.reload();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
         console.error("Sync failed:", errorData);
         alert(`Sync failed: ${errorData.error || "Unknown error"}. Please try again.`);
         setSyncing(false);
+        return;
       }
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/sync/status?companyId=${companyId}`);
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            
+            if (statusData.status === "completed") {
+              clearInterval(pollInterval);
+              window.location.reload();
+            } else if (statusData.status === "failed") {
+              clearInterval(pollInterval);
+              alert(`Sync failed: ${statusData.error || "Unknown error"}. Please try again.`);
+              setSyncing(false);
+            }
+          }
+        } catch (error) {
+          console.error("Error polling sync status:", error);
+        }
+      }, 2000);
+
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (syncing) {
+          alert("Sync is taking longer than expected. Please refresh the page in a minute to check if it completed.");
+          setSyncing(false);
+        }
+      }, 180000);
     } catch (error) {
       console.error("Sync failed:", error);
-      if (error instanceof Error && error.name === 'AbortError') {
-        alert("Sync is taking longer than expected. It may still be processing in the background. Please refresh the page in a minute.");
-      } else {
-        alert("Sync failed. Please check your connection and try again.");
-      }
+      alert("Sync failed. Please check your connection and try again.");
       setSyncing(false);
     }
   };

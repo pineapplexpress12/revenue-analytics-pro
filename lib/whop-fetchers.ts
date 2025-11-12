@@ -6,7 +6,10 @@ export async function fetchAllMemberships(companyId: string) {
   for await (const membership of whopsdk.memberships.list({
     company_id: companyId
   })) {
-    allMemberships.push(membership);
+    const validStatuses = ['active', 'trialing', 'past_due', 'completed'];
+    if (validStatuses.includes(membership.status) && (membership as any).valid !== false) {
+      allMemberships.push(membership);
+    }
   }
   
   return allMemberships;

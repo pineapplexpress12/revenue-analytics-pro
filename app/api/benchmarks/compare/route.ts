@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { benchmarkData, products } from '@/lib/db/schema';
+import { benchmarkData, products, companies } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getRevenueRange, determineNiche, calculatePercentile, getStatus } from '@/lib/benchmarking/utils';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const companyId = searchParams.get('companyId');
+    const whopCompanyId = searchParams.get('companyId');
 
-    if (!companyId) {
+    if (!whopCompanyId) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
     }
 
     const metricsResponse = await fetch(
-      `${request.nextUrl.origin}/api/metrics/overview?companyId=${companyId}`
+      `${request.nextUrl.origin}/api/metrics/overview?companyId=${whopCompanyId}`
     );
     
     if (!metricsResponse.ok) {
@@ -23,12 +23,24 @@ export async function GET(request: NextRequest) {
 
     const myMetrics = await metricsResponse.json();
 
+    const company = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.whopCompanyId, whopCompanyId))
+      .limit(1);
+
+    if (!company[0]) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+
+    const dbCompanyId = company[0].id;
+
     const companyProducts = await db
       .select()
       .from(products)
       .where(
         and(
-          eq(products.companyId, companyId),
+          eq(products.companyId, dbCompanyId),
           eq(products.isApp, false)
         )
       )

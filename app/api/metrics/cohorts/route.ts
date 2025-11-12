@@ -39,31 +39,22 @@ export async function GET(request: NextRequest) {
       const cohortMonth = startOfMonth(addMonths(endDate, -cohorts + i + 1));
       const cohortEnd = addMonths(cohortMonth, 1);
 
-      const cohortMembers = await db
-        .select()
-        .from(members)
-        .where(
-          and(
-            eq(members.companyId, companyId),
-            gte(members.createdAt, cohortMonth),
-            lt(members.createdAt, cohortEnd)
-          )
-        );
-
-      const cohortSize = cohortMembers.length;
-      
-      if (cohortSize === 0) continue;
-
-      const memberIds = cohortMembers.map(m => m.id);
       const cohortMemberships = await db
         .select()
         .from(memberships)
         .where(
           and(
             eq(memberships.companyId, companyId),
-            sql`${memberships.memberId} IN ${memberIds}`
+            gte(memberships.startDate, cohortMonth),
+            lt(memberships.startDate, cohortEnd),
+            sql`${memberships.status} IN ('active', 'completed', 'cancelled')`
           )
         );
+
+      const cohortMemberIds = new Set(cohortMemberships.map(m => m.memberId));
+      const cohortSize = cohortMemberIds.size;
+      
+      if (cohortSize === 0) continue;
 
       const retention = {
         month0: 100,

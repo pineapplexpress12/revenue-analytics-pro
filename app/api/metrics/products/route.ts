@@ -94,19 +94,33 @@ export async function GET(request: NextRequest) {
             )
           );
 
-        const productRevenue = await db
-          .select({ 
-            total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL)), 0)` 
-          })
-          .from(payments)
-          .leftJoin(memberships, eq(payments.membershipId, memberships.id))
+        const memberIdsForProduct = await db
+          .select({ memberId: memberships.memberId })
+          .from(memberships)
           .where(
             and(
-              eq(payments.companyId, companyId),
-              eq(payments.status, "succeeded"),
+              eq(memberships.companyId, companyId),
               inArray(memberships.planId, planIds)
             )
-          );
+          )
+          .groupBy(memberships.memberId);
+
+        const memberIds = memberIdsForProduct.map(m => m.memberId);
+
+        const productRevenue = memberIds.length > 0 
+          ? await db
+              .select({ 
+                total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL)), 0)` 
+              })
+              .from(payments)
+              .where(
+                and(
+                  eq(payments.companyId, companyId),
+                  eq(payments.status, "succeeded"),
+                  inArray(payments.memberId, memberIds)
+                )
+              )
+          : [{ total: 0 }];
 
         const activeMembershipsByPlan = await db
           .select({

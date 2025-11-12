@@ -159,23 +159,16 @@ export async function POST(request: NextRequest) {
     for (const member of whopMembers) {
       if (!member.user?.id) continue;
       
-      const memberCreatedAt = userFirstSubscriptionMap.get(member.user.id) || new Date();
+      const userData = member.user as any;
+      const memberCreatedAt = userData?.createdAt 
+        ? new Date(Number(userData.createdAt) * 1000) 
+        : userFirstSubscriptionMap.get(member.user.id) || new Date();
       
       const memberData = member as any;
       const email = member.user?.email || memberData.email || "";
       const username = member.user?.username || "";
       const name = memberData.user?.name || "";
-      const userData = member.user as any;
-      const profilePictureUrl = 
-        memberData.user?.profile_pic_url || 
-        memberData.user?.profile_picture_url || 
-        memberData.user?.image_url ||
-        memberData.user?.avatar_url ||
-        userData?.profile_pic_url ||
-        userData?.profile_picture_url ||
-        userData?.image_url ||
-        userData?.avatar_url ||
-        null;
+      const profilePictureUrl = userData?.profilePicture?.sourceUrl || null;
       
       await db
         .insert(members)
@@ -287,7 +280,7 @@ export async function POST(request: NextRequest) {
           companyId: dbCompanyId,
           memberId: memberId,
           whopPaymentId: payment.id,
-          amount: String(Number(payment.subtotal) / 100),
+          amount: String(Number(payment.final_amount) / 100),
           currency: payment.currency || "usd",
           status: payment.status || "succeeded",
           paymentDate: paymentDate,
