@@ -274,13 +274,14 @@ export async function POST(request: NextRequest) {
         ? new Date(paymentTimestamp * 1000)
         : new Date();
 
+      const paymentAmount = (payment as any).final_amount || (payment as any).subtotal || 0;
       await db
         .insert(payments)
         .values({
           companyId: dbCompanyId,
           memberId: memberId,
           whopPaymentId: payment.id,
-          amount: String(Number(payment.final_amount) / 100),
+          amount: String(Number(paymentAmount) / 100),
           currency: payment.currency || "usd",
           status: payment.status || "succeeded",
           paymentDate: paymentDate,

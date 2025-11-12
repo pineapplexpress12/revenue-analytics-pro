@@ -123,13 +123,14 @@ export async function POST(request: NextRequest) {
             .limit(1);
 
           if (dbMember[0]) {
+            const paymentAmount = (payment as any).final_amount || (payment as any).subtotal || 0;
             await db
               .insert(payments)
               .values({
                 companyId: company.id,
                 memberId: dbMember[0].id,
                 whopPaymentId: payment.id,
-                amount: String(Number(payment.subtotal) / 100),
+                amount: String(Number(paymentAmount) / 100),
                 currency: payment.currency || "usd",
                 status: payment.status || "succeeded",
                 paymentDate: new Date(Number(payment.created_at) * 1000),
