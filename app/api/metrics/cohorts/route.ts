@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       const cohortMonth = startOfMonth(addMonths(endDate, -cohorts + i + 1));
       const cohortEnd = addMonths(cohortMonth, 1);
 
+      // Include all membership statuses for cohort analysis
       const cohortMemberships = await db
         .select()
         .from(memberships)
@@ -47,11 +48,14 @@ export async function GET(request: NextRequest) {
             eq(memberships.companyId, companyId),
             gte(memberships.startDate, cohortMonth),
             lt(memberships.startDate, cohortEnd),
-            sql`${memberships.status} IN ('active', 'completed', 'cancelled')`
+            sql`${memberships.status} IN ('active', 'completed', 'trialing', 'canceled', 'expired', 'past_due')`
           )
         );
 
-      const cohortMemberIds = new Set(cohortMemberships.map(m => m.memberId));
+      const cohortMemberIds = new Set<string>();
+      for (const membership of cohortMemberships) {
+        cohortMemberIds.add(membership.memberId);
+      }
       const cohortSize = cohortMemberIds.size;
       
       if (cohortSize === 0) continue;

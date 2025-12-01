@@ -35,15 +35,25 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const monthlyData = [];
 
+    // Include all membership statuses for accurate growth tracking
     const allMemberships = await db
       .select()
       .from(memberships)
       .where(
         and(
           eq(memberships.companyId, companyId),
-          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
+          sql`${memberships.status} IN ('active', 'completed', 'trialing', 'canceled', 'expired', 'past_due')`
         )
       );
+
+    const memberFirstSubscription = new Map<string, number>();
+    for (const membership of allMemberships) {
+      const startTime = new Date(membership.startDate).getTime();
+      const existing = memberFirstSubscription.get(membership.memberId);
+      if (!existing || startTime < existing) {
+        memberFirstSubscription.set(membership.memberId, startTime);
+      }
+    }
 
     for (let i = months - 1; i >= 0; i--) {
       const monthStart = startOfMonth(subMonths(now, i));
@@ -62,23 +72,26 @@ export async function GET(request: NextRequest) {
         if (startTime < monthEndTime && endTime >= monthStartTime) {
           activeMemberIds.add(membership.memberId);
         }
-        
-        if (startTime >= monthStartTime && startTime < monthEndTime) {
-          const earlierMemberships = allMemberships.filter(m => 
-            m.memberId === membership.memberId && 
-            new Date(m.startDate).getTime() < startTime
-          );
-          if (earlierMemberships.length === 0) {
-            newMemberIds.add(membership.memberId);
-          }
+      }
+
+      for (const [memberId, firstSubTime] of memberFirstSubscription.entries()) {
+        if (firstSubTime >= monthStartTime && firstSubTime < monthEndTime) {
+          newMemberIds.add(memberId);
         }
       }
 
       for (const membership of allMemberships) {
-        if (membership.endDate && membership.status !== "active") {
+        if (membership.endDate && membership.status === "canceled") {
           const cancelTime = new Date(membership.endDate).getTime();
           if (cancelTime >= monthStartTime && cancelTime < monthEndTime) {
-            churnedMemberIds.add(membership.memberId);
+            const hasActiveAfter = allMemberships.some(m => 
+              m.memberId === membership.memberId && 
+              new Date(m.startDate).getTime() > cancelTime &&
+              m.status === 'active'
+            );
+            if (!hasActiveAfter) {
+              churnedMemberIds.add(membership.memberId);
+            }
           }
         }
       }

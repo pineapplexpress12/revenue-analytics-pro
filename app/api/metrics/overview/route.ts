@@ -56,17 +56,18 @@ export async function GET(request: NextRequest) {
     
     const totalRevenue = await calculateTotalRevenue(companyId);
     
+    // Count active members - include trialing as they are valid active members
     const activeMembershipsResult = await db
       .select({ memberId: memberships.memberId })
       .from(memberships)
       .where(
         and(
           eq(memberships.companyId, companyId),
-          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
+          sql`${memberships.status} IN ('active', 'completed', 'trialing')`
         )
       )
       .groupBy(memberships.memberId);
-    
+
     const activeMembersCount = activeMembershipsResult.length;
 
     const twoMonthsAgo = new Date();
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           eq(memberships.companyId, companyId),
-          sql`${memberships.status} IN ('active', 'trialing', 'past_due', 'completed')`
+          sql`${memberships.status} IN ('active', 'completed', 'trialing')`
         )
       );
 

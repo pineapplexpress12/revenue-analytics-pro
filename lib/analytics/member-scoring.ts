@@ -22,68 +22,98 @@ interface MemberData {
 
 export function calculateChurnRisk(memberData: MemberData): number {
   let riskScore = 0;
-  
-  // Factor 1: Payment failures (up to 30 points)
+
+  const successfulPayments = memberData.payments.filter(p => p.status === 'succeeded');
+  const hasAnyPayments = successfulPayments.length > 0;
+
+  // No payments = high risk (40 points)
+  if (!hasAnyPayments) {
+    riskScore += 40;
+  }
+
+  // Failed payments increase risk (up to 30 points)
   const failedPayments = memberData.payments.filter(p => p.status === 'failed').length;
   riskScore += Math.min(failedPayments * 10, 30);
-  
-  // Factor 2: Time since last payment (up to 25 points)
+
+  // Days since last payment - use member creation date if no payments
   const lastPaymentDate = memberData.analytics?.lastPaymentAt || memberData.member.createdAt;
   const daysSinceLastPayment = differenceInDays(new Date(), new Date(lastPaymentDate));
-  
-  if (daysSinceLastPayment > 45) riskScore += 25;
+
+  if (daysSinceLastPayment > 60) riskScore += 30;
+  else if (daysSinceLastPayment > 45) riskScore += 25;
   else if (daysSinceLastPayment > 35) riskScore += 15;
   else if (daysSinceLastPayment > 30) riskScore += 10;
-  
-  // Factor 3: Membership status (up to 20 points)
-  const hasCanceled = memberData.memberships.some(m => m.cancelAtPeriodEnd);
+
+  // Canceled or canceling memberships
+  const hasCanceled = memberData.memberships.some(m => m.status === 'cancelled' || m.status === 'canceled' || m.cancelAtPeriodEnd);
   if (hasCanceled) riskScore += 20;
-  
-  // Factor 4: Declining payment amounts (up to 15 points)
-  const successfulPayments = memberData.payments
-    .filter(p => p.status === 'succeeded')
-    .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-  
-  const recentPayments = successfulPayments.slice(0, 3);
-  const olderPayments = successfulPayments.slice(3, 6);
-  
-  if (recentPayments.length && olderPayments.length) {
+
+  // Past due memberships indicate payment issues
+  const hasPastDue = memberData.memberships.some(m => m.status === 'past_due');
+  if (hasPastDue) riskScore += 25;
+
+  // Expired memberships indicate churn
+  const hasExpired = memberData.memberships.some(m => m.status === 'expired');
+  if (hasExpired) riskScore += 15;
+
+  // Declining payment amounts indicate potential churn
+  if (hasAnyPayments && successfulPayments.length >= 4) {
+    const sortedPayments = [...successfulPayments]
+      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+
+    const recentPayments = sortedPayments.slice(0, 2);
+    const olderPayments = sortedPayments.slice(2, 4);
+
     const recentAvg = average(recentPayments.map(p => parseFloat(p.amount)));
     const olderAvg = average(olderPayments.map(p => parseFloat(p.amount)));
-    if (recentAvg < olderAvg * 0.8) riskScore += 15;
+    if (recentAvg < olderAvg * 0.7) riskScore += 15;
   }
-  
-  // Factor 5: Short tenure (up to 10 points)
+
+  // Short tenure = higher risk
   const tenureMonths = memberData.analytics?.lifetimeMonths || 0;
-  if (tenureMonths < 2) riskScore += 10;
-  else if (tenureMonths < 4) riskScore += 5;
-  
+  if (tenureMonths < 1) riskScore += 10;
+  else if (tenureMonths < 3) riskScore += 5;
+
+  // Members with no active memberships are at high risk
+  const hasActiveMembership = memberData.memberships.some(
+    m => m.status === 'active' || m.status === 'trialing' || m.status === 'completed'
+  );
+  if (!hasActiveMembership && memberData.memberships.length > 0) {
+    riskScore += 25;
+  }
+
   return Math.min(Math.round(riskScore), 100);
 }
 
 export function calculateEngagementScore(memberData: MemberData): number {
   let engagementScore = 0;
   
-  // Factor 1: Payment consistency (up to 40 points)
-  const totalPayments = memberData.payments.filter(p => p.status === 'succeeded').length;
-  const expectedPayments = memberData.analytics?.lifetimeMonths || 1;
-  const consistencyRate = totalPayments / Math.max(expectedPayments, 1);
-  engagementScore += Math.min(consistencyRate * 40, 40);
+  const successfulPayments = memberData.payments.filter(p => p.status === 'succeeded');
+  const totalPayments = successfulPayments.length;
   
-  // Factor 2: Recent activity (up to 30 points)
-  const lastPaymentDate = memberData.analytics?.lastPaymentAt || memberData.member.createdAt;
-  const daysSinceLastPayment = differenceInDays(new Date(), new Date(lastPaymentDate));
+  if (totalPayments === 0) {
+    return 0;
+  }
   
-  if (daysSinceLastPayment < 7) engagementScore += 30;
-  else if (daysSinceLastPayment < 14) engagementScore += 20;
-  else if (daysSinceLastPayment < 30) engagementScore += 10;
+  const expectedPayments = Math.max(memberData.analytics?.lifetimeMonths || 1, 1);
+  const consistencyRate = Math.min(totalPayments / expectedPayments, 1);
+  engagementScore += Math.round(consistencyRate * 40);
   
-  // Factor 3: No failed payments (up to 15 points)
-  const failureRate = memberData.payments.filter(p => p.status === 'failed').length / 
-                      Math.max(memberData.payments.length, 1);
+  const lastPaymentDate = memberData.analytics?.lastPaymentAt;
+  if (lastPaymentDate) {
+    const daysSinceLastPayment = differenceInDays(new Date(), new Date(lastPaymentDate));
+    
+    if (daysSinceLastPayment <= 7) engagementScore += 30;
+    else if (daysSinceLastPayment <= 14) engagementScore += 25;
+    else if (daysSinceLastPayment <= 21) engagementScore += 20;
+    else if (daysSinceLastPayment <= 30) engagementScore += 15;
+    else if (daysSinceLastPayment <= 45) engagementScore += 10;
+  }
+  
+  const failedPayments = memberData.payments.filter(p => p.status === 'failed').length;
+  const failureRate = failedPayments / Math.max(memberData.payments.length, 1);
   engagementScore += Math.round((1 - failureRate) * 15);
   
-  // Factor 4: Tenure (up to 15 points)
   const tenureMonths = memberData.analytics?.lifetimeMonths || 0;
   engagementScore += Math.min(tenureMonths * 2, 15);
   

@@ -62,19 +62,8 @@ export async function GET(request: NextRequest) {
           };
         }
 
-        const activeMemberships = await db
-          .select({ count: sql<number>`cast(count(*) as int)` })
-          .from(memberships)
-          .where(
-            and(
-              eq(memberships.companyId, companyId),
-              eq(memberships.status, "active"),
-              inArray(memberships.planId, planIds)
-            )
-          );
-
-        const totalMemberships = await db
-          .select({ count: sql<number>`cast(count(*) as int)` })
+        const allProductMemberships = await db
+          .select()
           .from(memberships)
           .where(
             and(
@@ -83,29 +72,25 @@ export async function GET(request: NextRequest) {
             )
           );
 
-        const churnedMemberships = await db
-          .select({ count: sql<number>`cast(count(*) as int)` })
-          .from(memberships)
-          .where(
-            and(
-              eq(memberships.companyId, companyId),
-              eq(memberships.status, "cancelled"),
-              inArray(memberships.planId, planIds)
-            )
-          );
+        const activeMemberIds = new Set<string>();
+        const totalMemberIds = new Set<string>();
+        const churnedMemberIds = new Set<string>();
 
-        const memberIdsForProduct = await db
-          .select({ memberId: memberships.memberId })
-          .from(memberships)
-          .where(
-            and(
-              eq(memberships.companyId, companyId),
-              inArray(memberships.planId, planIds)
-            )
-          )
-          .groupBy(memberships.memberId);
+        for (const membership of allProductMemberships) {
+          totalMemberIds.add(membership.memberId);
 
-        const memberIds = memberIdsForProduct.map(m => m.memberId);
+          // Include trialing and completed as active
+          if (membership.status === 'active' || membership.status === 'trialing' || membership.status === 'completed') {
+            activeMemberIds.add(membership.memberId);
+          }
+
+          // Handle both US and UK spelling of canceled/cancelled
+          if (membership.status === 'cancelled' || membership.status === 'canceled' || membership.status === 'expired') {
+            churnedMemberIds.add(membership.memberId);
+          }
+        }
+
+        const memberIds = Array.from(totalMemberIds);
 
         const productRevenue = memberIds.length > 0 
           ? await db
@@ -122,6 +107,7 @@ export async function GET(request: NextRequest) {
               )
           : [{ total: 0 }];
 
+        // Include trialing in active count for MRR calculation
         const activeMembershipsByPlan = await db
           .select({
             planId: memberships.planId,
@@ -131,7 +117,7 @@ export async function GET(request: NextRequest) {
           .where(
             and(
               eq(memberships.companyId, companyId),
-              eq(memberships.status, "active"),
+              sql`${memberships.status} IN ('active', 'trialing')`,
               inArray(memberships.planId, planIds)
             )
           )
@@ -164,9 +150,9 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const activeCount = Number(activeMemberships[0]?.count || 0);
-        const totalCount = Number(totalMemberships[0]?.count || 0);
-        const churnedCount = Number(churnedMemberships[0]?.count || 0);
+        const activeCount = activeMemberIds.size;
+        const totalCount = totalMemberIds.size;
+        const churnedCount = churnedMemberIds.size;
 
         const churnRate = totalCount > 0 ? (churnedCount / totalCount) * 100 : 0;
 

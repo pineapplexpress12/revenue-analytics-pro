@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { payments, memberships } from "@/lib/db/schema";
-import { eq, and, gte, lte, sum } from "drizzle-orm";
+import { eq, and, gte, lte, sum, sql } from "drizzle-orm";
 import { calculateMRR } from "./mrr";
 
 export async function calculateTotalRevenue(
@@ -53,14 +53,15 @@ export async function calculateRevenueGrowth(
 
 export async function calculateARPU(companyId: string): Promise<number> {
   const mrr = await calculateMRR(companyId);
-  
+
+  // Include trialing in active count for ARPU calculation
   const activeCount = await db
     .select()
     .from(memberships)
     .where(
       and(
         eq(memberships.companyId, companyId),
-        eq(memberships.status, "active")
+        sql`${memberships.status} IN ('active', 'trialing')`
       )
     );
 
