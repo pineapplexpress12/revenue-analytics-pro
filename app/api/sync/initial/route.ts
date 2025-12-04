@@ -77,9 +77,13 @@ export async function POST(request: NextRequest) {
   const debugLogs: string[] = [];
 
   try {
+    debugLogs.push(`[INIT] Starting initial sync at ${startedAt.toISOString()}`);
+
     const body = await request.json();
     companyId = body.companyId;
     const companyName = body.companyName || "Unknown Company";
+
+    debugLogs.push(`[INIT] Company ID: ${companyId}, Name: ${companyName}`);
 
     if (!companyId) {
       return NextResponse.json(
@@ -88,6 +92,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    debugLogs.push(`[DB] Checking for existing company in database...`);
     const existingCompany = await db
       .select()
       .from(companies)
@@ -95,6 +100,7 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existingCompany.length === 0) {
+      debugLogs.push(`[DB] Creating new company record...`);
       const [newCompany] = await db
         .insert(companies)
         .values({
@@ -103,8 +109,10 @@ export async function POST(request: NextRequest) {
         })
         .returning();
       dbCompanyId = newCompany.id;
+      debugLogs.push(`[DB] Created new company with DB ID: ${dbCompanyId}`);
     } else {
       dbCompanyId = existingCompany[0].id;
+      debugLogs.push(`[DB] Found existing company with DB ID: ${dbCompanyId}`);
     }
 
     const logSync = async (
@@ -127,7 +135,11 @@ export async function POST(request: NextRequest) {
 
     // 1. Sync Products
     try {
+      debugLogs.push(`[PRODUCTS] Starting product sync for company ${companyId}`);
       const whopProducts = await fetchAllProducts(companyId);
+      debugLogs.push(`[PRODUCTS] Fetched ${whopProducts.length} products from Whop API`);
+
+      // It's OK for a company to have 0 products - this is a valid state
       for (const product of whopProducts) {
         await db
           .insert(products)
@@ -151,19 +163,23 @@ export async function POST(request: NextRequest) {
       }
       syncResults.products = { count: whopProducts.length, status: "completed", error: null };
       await logSync("products", "completed", whopProducts.length);
+      debugLogs.push(`[PRODUCTS] Successfully synced ${whopProducts.length} products`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error syncing products";
       syncResults.products = { count: 0, status: "failed", error: errorMsg };
       await logSync("products", "failed", 0, errorMsg);
       console.error("Products sync failed:", error);
+      debugLogs.push(`[PRODUCTS] FAILED: ${errorMsg}`);
     }
 
     // 2. Sync Plans
     try {
+      debugLogs.push(`[PLANS] Starting plans sync for company ${companyId}`);
       const whopPlans = [];
       for await (const plan of whopsdk.plans.list({ company_id: companyId })) {
         whopPlans.push(plan);
       }
+      debugLogs.push(`[PLANS] Fetched ${whopPlans.length} plans from Whop API`);
 
       const dbProducts = await db
         .select()
@@ -171,12 +187,20 @@ export async function POST(request: NextRequest) {
         .where(eq(products.companyId, dbCompanyId));
 
       const productMap = new Map(dbProducts.map(p => [p.whopProductId, p.id]));
+      let plansLinked = 0;
+      let plansSkipped = 0;
 
       for (const plan of whopPlans) {
-        if (!plan.product?.id) continue;
+        if (!plan.product?.id) {
+          plansSkipped++;
+          continue;
+        }
 
         const productId = productMap.get(plan.product.id);
-        if (!productId) continue;
+        if (!productId) {
+          plansSkipped++;
+          continue;
+        }
 
         await db
           .insert(plans)
@@ -197,14 +221,17 @@ export async function POST(request: NextRequest) {
               metadata: plan,
             },
           });
+        plansLinked++;
       }
       syncResults.plans = { count: whopPlans.length, status: "completed", error: null };
       await logSync("plans", "completed", whopPlans.length);
+      debugLogs.push(`[PLANS] Successfully synced ${plansLinked} plans (${plansSkipped} skipped - no matching product)`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error syncing plans";
       syncResults.plans = { count: 0, status: "failed", error: errorMsg };
       await logSync("plans", "failed", 0, errorMsg);
       console.error("Plans sync failed:", error);
+      debugLogs.push(`[PLANS] FAILED: ${errorMsg}`);
     }
 
     // 3. Sync Members with profile pictures from Users API
@@ -519,26 +546,56 @@ export async function POST(request: NextRequest) {
       details: syncResults,
       debugLogs: debugLogs,
     });
-  } catch (error) {
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
     console.error("Initial sync failed:", error);
+    debugLogs.push(`[ERROR] Sync failed with error: ${errorMessage}`);
+    if (errorStack) {
+      debugLogs.push(`[ERROR] Stack: ${errorStack.substring(0, 500)}`);
+    }
+
+    // Determine error type for better user messaging
+    let userFriendlyMessage = errorMessage;
+    const errorStatus = error?.status || error?.response?.status;
+
+    if (errorStatus === 401) {
+      userFriendlyMessage = "Authentication failed. Please check your Whop API key configuration.";
+    } else if (errorStatus === 403) {
+      userFriendlyMessage = "Permission denied. Please ensure your app has the required permissions in Whop.";
+    } else if (errorStatus === 429) {
+      userFriendlyMessage = "Rate limited by Whop API. Please wait a minute and try again.";
+    } else if (errorStatus >= 500) {
+      userFriendlyMessage = "Whop API is temporarily unavailable. Please try again later.";
+    } else if (errorMessage.includes("ECONNREFUSED") || errorMessage.includes("ENOTFOUND")) {
+      userFriendlyMessage = "Network error. Please check your internet connection and try again.";
+    } else if (errorMessage.includes("database") || errorMessage.includes("postgres") || errorMessage.includes("POSTGRES")) {
+      userFriendlyMessage = "Database connection error. Please try again later.";
+    }
 
     if (dbCompanyId) {
-      await db.insert(syncLogs).values({
-        companyId: dbCompanyId,
-        syncType: "full",
-        entityType: "all",
-        status: "failed",
-        recordsProcessed: 0,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-        startedAt,
-        completedAt: new Date(),
-      });
+      try {
+        await db.insert(syncLogs).values({
+          companyId: dbCompanyId,
+          syncType: "full",
+          entityType: "all",
+          status: "failed",
+          recordsProcessed: 0,
+          errorMessage: errorMessage,
+          startedAt,
+          completedAt: new Date(),
+        });
+      } catch (logError) {
+        console.error("Failed to log sync error:", logError);
+      }
     }
 
     return NextResponse.json(
       {
         error: "Sync failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: userFriendlyMessage,
+        technicalDetails: errorMessage,
         details: syncResults,
         debugLogs: debugLogs,
       },

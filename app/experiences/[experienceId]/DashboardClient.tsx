@@ -213,7 +213,9 @@ export function DashboardClient({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
         console.error("Sync failed:", errorData);
-        alert(`Sync failed: ${errorData.error || "Unknown error"}. Please try again.`);
+        // Show user-friendly message if available, otherwise show technical details
+        const displayMessage = errorData.message || errorData.error || "Unknown error";
+        alert(`Sync failed: ${displayMessage}. Please try again.`);
         setSyncing(false);
         return;
       }
